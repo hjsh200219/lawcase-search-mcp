@@ -37,6 +37,11 @@ import type {
 
 const BASE_URL = "http://www.law.go.kr/DRF";
 const TIMEOUT_MS = 30000;
+const REQUEST_INTERVAL_MS = 1000; // 요청 간 최소 1초 간격
+const MAX_RETRIES = 3;
+const BASE_RETRY_DELAY_MS = 3000; // 재시도 시 기본 대기 3초 (지수 백오프)
+
+let lastRequestTime = 0;
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -86,27 +91,80 @@ function ensureArray<T>(v: T | T[] | null | undefined): T[] {
   return [v];
 }
 
-async function fetchXml(url: string): Promise<Record<string, unknown>> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-
-    if (!response.ok) {
-      throw new Error(`법제처 API 오류: HTTP ${response.status}`);
-    }
-
-    const text = await response.text();
-
-    if (!text || text.trim() === "") {
-      throw new Error("법제처 API가 빈 응답을 반환했습니다.");
-    }
-
-    return xmlParser.parse(text) as Record<string, unknown>;
-  } finally {
-    clearTimeout(timeout);
+async function throttle(): Promise<void> {
+  const now = Date.now();
+  const elapsed = now - lastRequestTime;
+  if (elapsed < REQUEST_INTERVAL_MS) {
+    await new Promise((resolve) => setTimeout(resolve, REQUEST_INTERVAL_MS - elapsed));
   }
+  lastRequestTime = Date.now();
+}
+
+async function fetchXml(url: string): Promise<Record<string, unknown>> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    await throttle();
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+
+      // rate limit 응답 시 재시도
+      if (response.status === 429 || response.status === 503) {
+        clearTimeout(timeout);
+        if (attempt < MAX_RETRIES) {
+          const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+          console.error(`법제처 API 요청 제한 (HTTP ${response.status}), ${delay / 1000}초 후 재시도... (${attempt + 1}/${MAX_RETRIES})`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        throw new Error(`법제처 API 요청 제한: ${MAX_RETRIES}회 재시도 후에도 실패했습니다. 잠시 후 다시 시도해주세요.`);
+      }
+
+      if (!response.ok) {
+        clearTimeout(timeout);
+        // 서버 오류(5xx)도 재시도
+        if (response.status >= 500 && attempt < MAX_RETRIES) {
+          const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+          console.error(`법제처 API 서버 오류 (HTTP ${response.status}), ${delay / 1000}초 후 재시도... (${attempt + 1}/${MAX_RETRIES})`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        throw new Error(`법제처 API 오류: HTTP ${response.status}`);
+      }
+
+      const text = await response.text();
+
+      // 빈 응답도 rate limit일 수 있음
+      if (!text || text.trim() === "") {
+        clearTimeout(timeout);
+        if (attempt < MAX_RETRIES) {
+          const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+          console.error(`법제처 API 빈 응답, ${delay / 1000}초 후 재시도... (${attempt + 1}/${MAX_RETRIES})`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        throw new Error("법제처 API가 빈 응답을 반환했습니다. 요청 제한일 수 있습니다. 잠시 후 다시 시도해주세요.");
+      }
+
+      return xmlParser.parse(text) as Record<string, unknown>;
+    } catch (err) {
+      clearTimeout(timeout);
+      // AbortError(타임아웃)도 재시도
+      if (err instanceof DOMException && err.name === "AbortError" && attempt < MAX_RETRIES) {
+        const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+        console.error(`법제처 API 타임아웃, ${delay / 1000}초 후 재시도... (${attempt + 1}/${MAX_RETRIES})`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error("법제처 API 요청 실패: 최대 재시도 횟수를 초과했습니다.");
 }
 
 function buildSearchUrl(
