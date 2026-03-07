@@ -42,7 +42,7 @@ if (!LAW_API_OC) {
 }
 
 const server = new McpServer({
-  name: "korea-law-search",
+  name: "law-search",
   version: "3.0.0",
 });
 
