@@ -30,6 +30,22 @@ import {
   searchCommitteeDecisions,
   getCommitteeDecisionDetail,
   getCommitteeName,
+  searchAdminAppeals,
+  getAdminAppealDetail,
+  searchOldNewLaw,
+  getOldNewLawDetail,
+  searchLawSystem,
+  getLawSystemDetail,
+  searchThreeWayComp,
+  getThreeWayCompDetail,
+  searchAttachedForms,
+  searchLawAbbreviations,
+  searchLawChangeHistory,
+  getLawArticleSub,
+  searchAILegalTerms,
+  searchLinkedOrdinances,
+  searchAdminRuleOldNew,
+  getAdminRuleOldNewDetail,
 } from "./law-api.js";
 
 const LAW_API_OC = process.env.LAW_API_OC || "";
@@ -43,7 +59,7 @@ if (!LAW_API_OC) {
 
 const server = new McpServer({
   name: "law-search",
-  version: "3.0.0",
+  version: "4.0.0",
 });
 
 const MAX_CONTENT_LENGTH = 8000;
@@ -842,6 +858,656 @@ server.tool(
       return { content: [{ type: "text", text: parts.join("\n") }] };
     } catch (error) {
       return errorResponse("위원회 결정문 상세 조회", error);
+    }
+  }
+);
+
+// =========================================================
+// 11. 행정심판례 검색 (decc)
+// =========================================================
+
+server.tool(
+  "search_admin_appeals",
+  "행정심판 재결례를 키워드로 검색합니다.",
+  {
+    query: z.string().min(1).max(100).describe("검색어"),
+    page: z.number().int().min(1).default(1).optional().describe("페이지 번호"),
+    display: z.number().int().min(1).max(100).default(20).optional().describe("페이지당 결과 수"),
+  },
+  async (params) => {
+    try {
+      const result = await searchAdminAppeals(LAW_API_OC, {
+        query: params.query,
+        page: params.page ?? 1,
+        display: params.display ?? 20,
+      });
+
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: `"${params.query}" 행정심판례 검색 결과가 없습니다.` }] };
+      }
+
+      const listText = result.items
+        .map((a, i) =>
+          `${i + 1}. [${a.id}] ${a.caseName}\n   사건번호: ${a.caseNumber} | 의결일: ${a.decisionDate} | 재결청: ${a.decisionAgency}\n   재결구분: ${a.decisionType}${a.dispositionAgency ? ` | 처분청: ${a.dispositionAgency}` : ""}`
+        )
+        .join("\n\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `## 행정심판례 검색 결과\n\n검색어: "${params.query}"\n총 ${result.totalCount}건 (${result.currentPage}페이지)\n\n${listText}\n\n---\n상세 조회: get_admin_appeal_detail에 일련번호([ ] 안의 숫자)를 전달하세요.`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("행정심판례 검색", error);
+    }
+  }
+);
+
+server.tool(
+  "get_admin_appeal_detail",
+  "행정심판례 일련번호로 주문, 청구취지, 이유, 재결요지를 조회합니다.",
+  {
+    decc_id: z.number().int().positive().describe("행정심판재결례 일련번호"),
+  },
+  async (params) => {
+    try {
+      const d = await getAdminAppealDetail(LAW_API_OC, params.decc_id);
+
+      const parts: string[] = [
+        `## ${d.caseName}`,
+        "",
+        `- **사건번호**: ${d.caseNumber}`,
+        `- **의결일자**: ${d.decisionDate}`,
+        `- **재결청**: ${d.decisionAgency}`,
+        `- **재결유형**: ${d.decisionTypeName}`,
+      ];
+
+      if (d.dispositionDate) parts.push(`- **처분일자**: ${d.dispositionDate}`);
+      if (d.dispositionAgency) parts.push(`- **처분청**: ${d.dispositionAgency}`);
+      if (d.summary) parts.push("", "### 재결요지", "", d.summary);
+      if (d.claim) parts.push("", "### 청구취지", "", d.claim);
+      if (d.ruling) parts.push("", "### 주문", "", d.ruling);
+      if (d.reason) parts.push("", "### 이유", "", truncate(d.reason));
+
+      return { content: [{ type: "text", text: parts.join("\n") }] };
+    } catch (error) {
+      return errorResponse("행정심판례 상세 조회", error);
+    }
+  }
+);
+
+// =========================================================
+// 12. 신구법비교 검색 (oldAndNew)
+// =========================================================
+
+server.tool(
+  "search_old_new_law",
+  "법령의 신구법(개정 전후) 비교 목록을 검색합니다.",
+  {
+    query: z.string().min(1).max(100).describe("검색어 (법령명)"),
+    page: z.number().int().min(1).default(1).optional().describe("페이지 번호"),
+    display: z.number().int().min(1).max(100).default(20).optional().describe("페이지당 결과 수"),
+  },
+  async (params) => {
+    try {
+      const result = await searchOldNewLaw(LAW_API_OC, {
+        query: params.query,
+        page: params.page ?? 1,
+        display: params.display ?? 20,
+      });
+
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: `"${params.query}" 신구법비교 검색 결과가 없습니다.` }] };
+      }
+
+      const listText = result.items
+        .map((l, i) =>
+          `${i + 1}. [${l.id}] ${l.lawName}\n   ${l.lawType} | ${l.amendmentType} | 공포: ${l.promulgationDate} | 시행: ${l.enforcementDate}\n   소관: ${l.departmentName}`
+        )
+        .join("\n\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `## 신구법비교 검색 결과\n\n검색어: "${params.query}"\n총 ${result.totalCount}건 (${result.currentPage}페이지)\n\n${listText}\n\n---\n상세 조회: get_old_new_law_detail에 일련번호([ ] 안의 숫자)를 전달하세요.`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("신구법비교 검색", error);
+    }
+  }
+);
+
+server.tool(
+  "get_old_new_law_detail",
+  "법령 신구법비교 상세 내용(개정 전후 조문 대비)을 조회합니다.",
+  {
+    oldnew_id: z.number().int().positive().describe("신구법 일련번호"),
+  },
+  async (params) => {
+    try {
+      const d = await getOldNewLawDetail(LAW_API_OC, params.oldnew_id);
+
+      const parts: string[] = [
+        `## 신구법비교: ${d.newBasicInfo.lawName}`,
+        "",
+        "### 구법 (개정 전)",
+        `- **법령명**: ${d.oldBasicInfo.lawName}`,
+        `- **시행일자**: ${d.oldBasicInfo.enforcementDate}`,
+        `- **공포일자**: ${d.oldBasicInfo.promulgationDate}`,
+        `- **제개정구분**: ${d.oldBasicInfo.amendmentType}`,
+      ];
+
+      if (d.oldArticles) parts.push("", "#### 구조문", "", truncate(d.oldArticles, 3000));
+
+      parts.push(
+        "",
+        "### 신법 (개정 후)",
+        `- **법령명**: ${d.newBasicInfo.lawName}`,
+        `- **시행일자**: ${d.newBasicInfo.enforcementDate}`,
+        `- **공포일자**: ${d.newBasicInfo.promulgationDate}`,
+        `- **제개정구분**: ${d.newBasicInfo.amendmentType}`,
+      );
+
+      if (d.newArticles) parts.push("", "#### 신조문", "", truncate(d.newArticles, 3000));
+
+      return { content: [{ type: "text", text: parts.join("\n") }] };
+    } catch (error) {
+      return errorResponse("신구법비교 상세 조회", error);
+    }
+  }
+);
+
+// =========================================================
+// 13. 법령 체계도 검색 (lsStmd)
+// =========================================================
+
+server.tool(
+  "search_law_system",
+  "법령의 체계도(상하위법 관계) 목록을 검색합니다.",
+  {
+    query: z.string().min(1).max(100).describe("검색어 (법령명)"),
+    page: z.number().int().min(1).default(1).optional().describe("페이지 번호"),
+    display: z.number().int().min(1).max(100).default(20).optional().describe("페이지당 결과 수"),
+  },
+  async (params) => {
+    try {
+      const result = await searchLawSystem(LAW_API_OC, {
+        query: params.query,
+        page: params.page ?? 1,
+        display: params.display ?? 20,
+      });
+
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: `"${params.query}" 법령 체계도 검색 결과가 없습니다.` }] };
+      }
+
+      const listText = result.items
+        .map((l, i) =>
+          `${i + 1}. [${l.id}] ${l.lawName}\n   ${l.lawType} | 소관: ${l.departmentName} | 시행: ${l.enforcementDate}`
+        )
+        .join("\n\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `## 법령 체계도 검색 결과\n\n검색어: "${params.query}"\n총 ${result.totalCount}건 (${result.currentPage}페이지)\n\n${listText}\n\n---\n상세 조회: get_law_system_detail에 법령일련번호([ ] 안의 숫자)를 전달하세요.`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("법령 체계도 검색", error);
+    }
+  }
+);
+
+server.tool(
+  "get_law_system_detail",
+  "법령의 체계도(상위법-하위법-행정규칙-자치법규 관계)를 조회합니다.",
+  {
+    law_id: z.number().int().positive().describe("법령 일련번호"),
+  },
+  async (params) => {
+    try {
+      const d = await getLawSystemDetail(LAW_API_OC, params.law_id);
+
+      const parts: string[] = [
+        `## 법령 체계도: ${d.basicInfo.lawName}`,
+        "",
+        `- **법령ID**: ${d.basicInfo.lawId}`,
+        `- **법종구분**: ${d.basicInfo.lawType}`,
+        `- **시행일자**: ${d.basicInfo.enforcementDate}`,
+        `- **공포일자**: ${d.basicInfo.promulgationDate}`,
+      ];
+
+      if (d.hierarchy) parts.push("", "### 상하위법 체계", "", truncate(d.hierarchy));
+
+      return { content: [{ type: "text", text: parts.join("\n") }] };
+    } catch (error) {
+      return errorResponse("법령 체계도 상세 조회", error);
+    }
+  }
+);
+
+// =========================================================
+// 14. 3단비교 검색 (thdCmp)
+// =========================================================
+
+server.tool(
+  "search_three_way_comp",
+  "법률·시행령·시행규칙 3단비교 목록을 검색합니다.",
+  {
+    query: z.string().min(1).max(100).describe("검색어 (법령명)"),
+    page: z.number().int().min(1).default(1).optional().describe("페이지 번호"),
+    display: z.number().int().min(1).max(100).default(20).optional().describe("페이지당 결과 수"),
+  },
+  async (params) => {
+    try {
+      const result = await searchThreeWayComp(LAW_API_OC, {
+        query: params.query,
+        page: params.page ?? 1,
+        display: params.display ?? 20,
+      });
+
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: `"${params.query}" 3단비교 검색 결과가 없습니다.` }] };
+      }
+
+      const listText = result.items
+        .map((l, i) =>
+          `${i + 1}. [${l.id}] ${l.lawName}\n   ${l.lawType} | 소관: ${l.departmentName} | 시행: ${l.enforcementDate}`
+        )
+        .join("\n\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `## 3단비교 검색 결과\n\n검색어: "${params.query}"\n총 ${result.totalCount}건 (${result.currentPage}페이지)\n\n${listText}\n\n---\n상세 조회: get_three_way_comp_detail에 일련번호([ ] 안의 숫자)를 전달하세요.`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("3단비교 검색", error);
+    }
+  }
+);
+
+server.tool(
+  "get_three_way_comp_detail",
+  "법률·시행령·시행규칙의 3단비교 상세 내용을 조회합니다.",
+  {
+    law_id: z.number().int().positive().describe("삼단비교 일련번호 (또는 법령일련번호)"),
+    comparison_type: z.enum(["citation", "delegation"]).default("citation").optional()
+      .describe("비교 유형: citation=인용조문, delegation=위임조문"),
+  },
+  async (params) => {
+    try {
+      const knd = params.comparison_type === "delegation" ? 2 : 1;
+      const d = await getThreeWayCompDetail(LAW_API_OC, params.law_id, knd as 1 | 2);
+
+      const typeLabel = knd === 1 ? "인용조문" : "위임조문";
+      const parts: string[] = [
+        `## 3단비교 (${typeLabel}): ${d.basicInfo.lawName}`,
+        "",
+      ];
+
+      if (d.basicInfo.decreeName) parts.push(`- **시행령**: ${d.basicInfo.decreeName}`);
+      if (d.basicInfo.ruleName) parts.push(`- **시행규칙**: ${d.basicInfo.ruleName}`);
+      parts.push(`- **삼단비교 존재 여부**: ${d.basicInfo.comparisonExists}`);
+
+      if (d.content) parts.push("", `### ${typeLabel} 삼단비교`, "", truncate(d.content));
+
+      return { content: [{ type: "text", text: parts.join("\n") }] };
+    } catch (error) {
+      return errorResponse("3단비교 상세 조회", error);
+    }
+  }
+);
+
+// =========================================================
+// 15. 별표서식 검색 (licbyl)
+// =========================================================
+
+server.tool(
+  "search_attached_forms",
+  "법령의 별표·서식·별지를 검색합니다.",
+  {
+    query: z.string().min(1).max(100).describe("검색어"),
+    page: z.number().int().min(1).default(1).optional().describe("페이지 번호"),
+    display: z.number().int().min(1).max(100).default(20).optional().describe("페이지당 결과 수"),
+    form_type: z.enum(["all", "table", "form", "annex", "other", "unclassified"]).default("all").optional()
+      .describe("종류: all=전체, table=별표, form=서식, annex=별지, other=기타, unclassified=미분류"),
+  },
+  async (params) => {
+    try {
+      const kndMap: Record<string, number | undefined> = {
+        all: undefined, table: 1, form: 2, annex: 3, other: 4, unclassified: 5,
+      };
+      const result = await searchAttachedForms(LAW_API_OC, {
+        query: params.query,
+        page: params.page ?? 1,
+        display: params.display ?? 20,
+        knd: kndMap[params.form_type ?? "all"] as 1 | 2 | 3 | 4 | 5 | undefined,
+      });
+
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: `"${params.query}" 별표서식 검색 결과가 없습니다.` }] };
+      }
+
+      const listText = result.items
+        .map((f, i) =>
+          `${i + 1}. [${f.id}] ${f.formName}\n   관련법령: ${f.relatedLawName} | 종류: ${f.formType} | 공포: ${f.promulgationDate}`
+        )
+        .join("\n\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `## 별표서식 검색 결과\n\n검색어: "${params.query}"\n총 ${result.totalCount}건 (${result.currentPage}페이지)\n\n${listText}`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("별표서식 검색", error);
+    }
+  }
+);
+
+// =========================================================
+// 16. 법령명 약칭 검색 (lsAbrv)
+// =========================================================
+
+server.tool(
+  "search_law_abbreviations",
+  "법령의 약칭(줄여서 부르는 법령명) 목록을 검색합니다.",
+  {
+    query: z.string().max(100).default("").optional()
+      .describe("검색어 (빈 값이면 전체 약칭 목록)"),
+    page: z.number().int().min(1).default(1).optional().describe("페이지 번호"),
+    display: z.number().int().min(1).max(100).default(20).optional().describe("페이지당 결과 수"),
+  },
+  async (params) => {
+    try {
+      const result = await searchLawAbbreviations(LAW_API_OC, {
+        query: params.query || "",
+        page: params.page ?? 1,
+        display: params.display ?? 20,
+      });
+
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: `법령 약칭 검색 결과가 없습니다.` }] };
+      }
+
+      const listText = result.items
+        .map((l, i) =>
+          `${i + 1}. [${l.id}] ${l.lawName} → **${l.abbreviation}**\n   ${l.lawType} | 소관: ${l.departmentName} | 시행: ${l.enforcementDate}`
+        )
+        .join("\n\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `## 법령 약칭 검색 결과\n\n총 ${result.totalCount}건 (${result.currentPage}페이지)\n\n${listText}`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("법령 약칭 검색", error);
+    }
+  }
+);
+
+// =========================================================
+// 17. 법령 변경이력 (lsHstInf)
+// =========================================================
+
+server.tool(
+  "search_law_change_history",
+  "특정 일자에 변경된 법령 목록을 조회합니다.",
+  {
+    date: z.string().regex(/^\d{8}$/).describe("변경 일자 (YYYYMMDD 형식)"),
+    page: z.number().int().min(1).default(1).optional().describe("페이지 번호"),
+    display: z.number().int().min(1).max(100).default(20).optional().describe("페이지당 결과 수"),
+  },
+  async (params) => {
+    try {
+      const result = await searchLawChangeHistory(LAW_API_OC, {
+        regDt: params.date,
+        page: params.page ?? 1,
+        display: params.display ?? 20,
+      });
+
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: `${params.date} 일자에 변경된 법령이 없습니다.` }] };
+      }
+
+      const listText = result.items
+        .map((l, i) =>
+          `${i + 1}. [${l.id}] ${l.lawName}\n   ${l.lawType} | ${l.amendmentType} | 공포: ${l.promulgationDate} | 시행: ${l.enforcementDate} | 소관: ${l.departmentName}`
+        )
+        .join("\n\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `## 법령 변경이력 (${params.date})\n\n총 ${result.totalCount}건 (${result.currentPage}페이지)\n\n${listText}`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("법령 변경이력 조회", error);
+    }
+  }
+);
+
+// =========================================================
+// 18. 조항호목 조회 (lawjosub)
+// =========================================================
+
+server.tool(
+  "get_law_article_sub",
+  "법령의 특정 조·항·호·목을 정밀하게 조회합니다.",
+  {
+    law_id: z.number().int().positive().describe("법령 일련번호 (MST)"),
+    article: z.string().min(1).describe("조번호 (6자리, 예: '000100'은 제1조, '001200'은 제12조)"),
+    paragraph: z.string().optional().describe("항번호 (6자리, 예: '000100'은 제1항)"),
+    clause: z.string().optional().describe("호번호 (6자리, 예: '000100'은 제1호)"),
+    subclause: z.string().optional().describe("목번호 (한글 한 글자, 예: '가')"),
+  },
+  async (params) => {
+    try {
+      const d = await getLawArticleSub(LAW_API_OC, {
+        lawId: params.law_id,
+        jo: params.article,
+        hang: params.paragraph,
+        ho: params.clause,
+        mok: params.subclause,
+      });
+
+      const parts: string[] = [
+        `## ${d.lawNameKo}`,
+        "",
+        `- **법종구분**: ${d.lawTypeName}`,
+        `- **소관부처**: ${d.departmentName}`,
+        `- **시행일자**: ${d.enforcementDate}`,
+      ];
+
+      if (d.articleContent) {
+        parts.push("", `### 제${d.articleNumber}조`, "", d.articleContent);
+      }
+      if (d.paragraphContent) {
+        parts.push("", `#### 제${d.paragraphNumber}항`, "", d.paragraphContent);
+      }
+      if (d.clauseContent) {
+        parts.push("", `##### 제${d.clauseNumber}호`, "", d.clauseContent);
+      }
+      if (d.subclauseContent) {
+        parts.push("", `###### ${d.subclauseNumber}목`, "", d.subclauseContent);
+      }
+
+      return { content: [{ type: "text", text: parts.join("\n") }] };
+    } catch (error) {
+      return errorResponse("조항호목 조회", error);
+    }
+  }
+);
+
+// =========================================================
+// 19. 지식베이스 법령용어 검색 (lstrmAI)
+// =========================================================
+
+server.tool(
+  "search_ai_legal_terms",
+  "법령정보 지식베이스에서 법령용어를 검색합니다. 용어간·조문간 관계 정보를 제공합니다.",
+  {
+    query: z.string().min(1).max(100).describe("검색어 (법령용어)"),
+    page: z.number().int().min(1).default(1).optional().describe("페이지 번호"),
+    display: z.number().int().min(1).max(100).default(20).optional().describe("페이지당 결과 수"),
+  },
+  async (params) => {
+    try {
+      const result = await searchAILegalTerms(LAW_API_OC, {
+        query: params.query,
+        page: params.page ?? 1,
+        display: params.display ?? 20,
+      });
+
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: `"${params.query}" 지식베이스 법령용어 검색 결과가 없습니다.` }] };
+      }
+
+      const listText = result.items
+        .map((t, i) =>
+          `${i + 1}. **${t.termName}**\n   동음이의어: ${t.homonymExists || "N"}${t.remarks ? ` | 비고: ${t.remarks}` : ""}`
+        )
+        .join("\n\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `## 지식베이스 법령용어 검색 결과\n\n검색어: "${params.query}"\n총 ${result.totalCount}건\n\n${listText}`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("지식베이스 법령용어 검색", error);
+    }
+  }
+);
+
+// =========================================================
+// 20. 법령-자치법규 연계 조례 검색 (lnkOrd)
+// =========================================================
+
+server.tool(
+  "search_linked_ordinances",
+  "법령에 연계된 지방자치단체 조례 목록을 검색합니다.",
+  {
+    query: z.string().min(1).max(100).describe("검색어 (법령명)"),
+    page: z.number().int().min(1).default(1).optional().describe("페이지 번호"),
+    display: z.number().int().min(1).max(100).default(20).optional().describe("페이지당 결과 수"),
+  },
+  async (params) => {
+    try {
+      const result = await searchLinkedOrdinances(LAW_API_OC, {
+        query: params.query,
+        page: params.page ?? 1,
+        display: params.display ?? 20,
+      });
+
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: `"${params.query}" 연계 조례 검색 결과가 없습니다.` }] };
+      }
+
+      const listText = result.items
+        .map((o, i) =>
+          `${i + 1}. [${o.id}] ${o.ordinanceName}\n   ${o.ordinanceType} | ${o.amendmentType} | 시행: ${o.enforcementDate}`
+        )
+        .join("\n\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `## 연계 조례 검색 결과\n\n검색어: "${params.query}"\n총 ${result.totalCount}건 (${result.currentPage}페이지)\n\n${listText}`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("연계 조례 검색", error);
+    }
+  }
+);
+
+// =========================================================
+// 21. 행정규칙 신구법비교 검색 (admrulOldAndNew)
+// =========================================================
+
+server.tool(
+  "search_admin_rule_old_new",
+  "행정규칙의 신구법(개정 전후) 비교 목록을 검색합니다.",
+  {
+    query: z.string().min(1).max(100).describe("검색어 (행정규칙명)"),
+    page: z.number().int().min(1).default(1).optional().describe("페이지 번호"),
+    display: z.number().int().min(1).max(100).default(20).optional().describe("페이지당 결과 수"),
+  },
+  async (params) => {
+    try {
+      const result = await searchAdminRuleOldNew(LAW_API_OC, {
+        query: params.query,
+        page: params.page ?? 1,
+        display: params.display ?? 20,
+      });
+
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: `"${params.query}" 행정규칙 신구법비교 검색 결과가 없습니다.` }] };
+      }
+
+      const listText = result.items
+        .map((r, i) =>
+          `${i + 1}. [${r.id}] ${r.ruleName}\n   ${r.lawType} | ${r.amendmentType} | 발령: ${r.issuanceDate} | 시행: ${r.enforcementDate}\n   소관: ${r.departmentName}`
+        )
+        .join("\n\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `## 행정규칙 신구법비교 검색 결과\n\n검색어: "${params.query}"\n총 ${result.totalCount}건 (${result.currentPage}페이지)\n\n${listText}\n\n---\n상세 조회: get_admin_rule_old_new_detail에 일련번호([ ] 안의 숫자)를 전달하세요.`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("행정규칙 신구법비교 검색", error);
+    }
+  }
+);
+
+server.tool(
+  "get_admin_rule_old_new_detail",
+  "행정규칙 신구법비교 상세 내용(개정 전후 조문 대비)을 조회합니다.",
+  {
+    oldnew_id: z.number().int().positive().describe("신구법 일련번호"),
+  },
+  async (params) => {
+    try {
+      const d = await getAdminRuleOldNewDetail(LAW_API_OC, params.oldnew_id);
+
+      const parts: string[] = [
+        `## 행정규칙 신구법비교: ${d.newBasicInfo.ruleName}`,
+        "",
+        "### 구법 (개정 전)",
+        `- **행정규칙명**: ${d.oldBasicInfo.ruleName}`,
+        `- **시행일자**: ${d.oldBasicInfo.enforcementDate}`,
+        `- **발령일자**: ${d.oldBasicInfo.issuanceDate}`,
+      ];
+
+      if (d.oldArticles) parts.push("", "#### 구조문", "", truncate(d.oldArticles, 3000));
+
+      parts.push(
+        "",
+        "### 신법 (개정 후)",
+        `- **행정규칙명**: ${d.newBasicInfo.ruleName}`,
+        `- **시행일자**: ${d.newBasicInfo.enforcementDate}`,
+        `- **발령일자**: ${d.newBasicInfo.issuanceDate}`,
+      );
+
+      if (d.newArticles) parts.push("", "#### 신조문", "", truncate(d.newArticles, 3000));
+
+      return { content: [{ type: "text", text: parts.join("\n") }] };
+    } catch (error) {
+      return errorResponse("행정규칙 신구법비교 상세 조회", error);
     }
   }
 );

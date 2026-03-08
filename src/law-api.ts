@@ -9,6 +9,9 @@ import type {
   CaseSearchParams,
   LawSearchParams,
   OrdinSearchParams,
+  AttachedFormSearchParams,
+  LawChangeHistoryParams,
+  LawArticleSubParams,
   SearchResult,
   LawListItem,
   LawArticle,
@@ -33,6 +36,22 @@ import type {
   ElawDetail,
   CommitteeDecisionListItem,
   CommitteeDecisionDetail,
+  AdminAppealListItem,
+  AdminAppealDetail,
+  OldNewLawListItem,
+  OldNewLawDetail,
+  LawSystemListItem,
+  LawSystemDetail,
+  ThreeWayCompListItem,
+  ThreeWayCompDetail,
+  AttachedFormListItem,
+  LawAbbreviationListItem,
+  LawChangeHistoryListItem,
+  LawArticleSubDetail,
+  AILegalTermListItem,
+  LinkedOrdinanceListItem,
+  AdminRuleOldNewListItem,
+  AdminRuleOldNewDetail,
 } from "./types.js";
 
 const BASE_URL = "http://www.law.go.kr/DRF";
@@ -53,6 +72,8 @@ const xmlParser = new XMLParser({
       "law", "prec", "Detc", "expc", "admrul", "Trty", "lstrm",
       "조문단위", "조", "Jo",
       "ftc", "acr", "fsc", "nlrc", "kcc", "oclt", "nhrck", "eiac", "ecc", "sfc", "iaciac",
+      "decc", "oldAndNew", "thdCmp", "licbyl", "법령용어",
+      "조문", "법률조문", "시행규칙조문", "위임행정규칙", "삼단비교",
     ];
     return arrayTags.includes(name);
   },
@@ -860,5 +881,667 @@ export async function getCommitteeDecisionDetail(
     reason: stripHtmlTags(str(root.이유 || root.조치이유)),
     summary: stripHtmlTags(str(root.결정요지 || root.판정요지 || root.사건의개요 || root.개요 || root.내용)),
     extras,
+  };
+}
+
+// =========================================================
+// 행정심판례 (decc)
+// =========================================================
+
+export async function searchAdminAppeals(
+  oc: string,
+  params: SearchParams
+): Promise<SearchResult<AdminAppealListItem>> {
+  const url = buildSearchUrl(oc, "decc", params);
+  const data = await fetchXml(url);
+
+  const root = data.Decc as Record<string, unknown> | undefined;
+  if (!root) return { totalCount: 0, currentPage: params.page || 1, items: [] };
+
+  const rawList = ensureArray(root.decc as Record<string, unknown>[]);
+  return {
+    totalCount: num(root.totalCnt),
+    currentPage: num(root.page) || params.page || 1,
+    items: rawList.map((raw) => ({
+      id: num(raw.행정심판재결례일련번호),
+      caseName: str(raw.사건명),
+      caseNumber: str(raw.사건번호),
+      dispositionDate: str(raw.처분일자),
+      decisionDate: str(raw.의결일자),
+      dispositionAgency: str(raw.처분청),
+      decisionAgency: str(raw.재결청),
+      decisionType: str(raw.재결구분명),
+      decisionTypeCode: str(raw.재결구분코드),
+      detailLink: str(raw.행정심판례상세링크),
+    })),
+  };
+}
+
+export async function getAdminAppealDetail(
+  oc: string,
+  id: number
+): Promise<AdminAppealDetail> {
+  const url = buildDetailUrl(oc, "decc", "ID", id);
+  const data = await fetchXml(url);
+
+  const root = data.PrecService as Record<string, unknown> | undefined;
+  if (!root) throw new Error("행정심판례를 찾을 수 없습니다");
+
+  return {
+    id: num(root.행정심판례일련번호),
+    caseName: str(root.사건명),
+    caseNumber: str(root.사건번호),
+    dispositionDate: str(root.처분일자),
+    decisionDate: str(root.의결일자),
+    dispositionAgency: str(root.처분청),
+    decisionAgency: str(root.재결청),
+    decisionTypeName: str(root.재결례유형명),
+    ruling: stripHtmlTags(str(root.주문)),
+    claim: stripHtmlTags(str(root.청구취지)),
+    reason: stripHtmlTags(str(root.이유)),
+    summary: stripHtmlTags(str(root.재결요지)),
+  };
+}
+
+// =========================================================
+// 신구법비교 (oldAndNew)
+// =========================================================
+
+export async function searchOldNewLaw(
+  oc: string,
+  params: SearchParams
+): Promise<SearchResult<OldNewLawListItem>> {
+  const url = buildSearchUrl(oc, "oldAndNew", params);
+  const data = await fetchXml(url);
+
+  const root = data.OldAndNewLawSearch as Record<string, unknown> | undefined;
+  if (!root) return { totalCount: 0, currentPage: params.page || 1, items: [] };
+
+  const rawList = ensureArray(root.oldAndNew as Record<string, unknown>[]);
+  return {
+    totalCount: num(root.totalCnt),
+    currentPage: num(root.page) || params.page || 1,
+    items: rawList.map((raw) => ({
+      id: num(raw.신구법일련번호),
+      currentHistoryCode: str(raw.현행연혁코드),
+      lawName: str(raw.신구법명),
+      lawId: str(raw.신구법ID),
+      promulgationDate: str(raw.공포일자),
+      promulgationNumber: str(raw.공포번호),
+      amendmentType: str(raw.제개정구분명),
+      departmentCode: str(raw.소관부처코드),
+      departmentName: str(raw.소관부처명),
+      lawType: str(raw.법령구분명),
+      enforcementDate: str(raw.시행일자),
+      detailLink: str(raw.신구법상세링크),
+    })),
+  };
+}
+
+export async function getOldNewLawDetail(
+  oc: string,
+  id: number
+): Promise<OldNewLawDetail> {
+  const url = buildDetailUrl(oc, "oldAndNew", "MST", id);
+  const data = await fetchXml(url);
+
+  const root = data.OldAndNewService as Record<string, unknown> | undefined;
+  if (!root) throw new Error("신구법비교 정보를 찾을 수 없습니다");
+
+  const oldInfo = root["구조문_기본정보"] as Record<string, unknown> || {};
+  const newInfo = root["신조문_기본정보"] as Record<string, unknown> || {};
+
+  // 조문목록을 텍스트로 변환
+  function extractArticles(list: unknown): string {
+    const wrapper = list as Record<string, unknown> | undefined;
+    if (!wrapper) return "";
+    const articles = ensureArray(wrapper["조문"] as Record<string, unknown>[]);
+    return articles.map((a) => stripHtmlTags(str(a["#text"] || a["조문내용"] || JSON.stringify(a)))).join("\n\n");
+  }
+
+  return {
+    oldBasicInfo: {
+      lawId: str(oldInfo.법령ID),
+      lawSerialNumber: num(oldInfo.법령일련번호),
+      enforcementDate: str(oldInfo.시행일자),
+      promulgationDate: str(oldInfo.공포일자),
+      promulgationNumber: str(oldInfo.공포번호),
+      isCurrent: str(oldInfo.현행여부),
+      amendmentType: str(oldInfo.제개정구분명),
+      lawName: str(oldInfo.법령명),
+      lawType: str(oldInfo.법종구분),
+    },
+    newBasicInfo: {
+      lawId: str(newInfo.법령ID),
+      lawSerialNumber: num(newInfo.법령일련번호),
+      enforcementDate: str(newInfo.시행일자),
+      promulgationDate: str(newInfo.공포일자),
+      promulgationNumber: str(newInfo.공포번호),
+      isCurrent: str(newInfo.현행여부),
+      amendmentType: str(newInfo.제개정구분명),
+      lawName: str(newInfo.법령명),
+      lawType: str(newInfo.법종구분),
+    },
+    oldArticles: extractArticles(root["구조문목록"]),
+    newArticles: extractArticles(root["신조문목록"]),
+  };
+}
+
+// =========================================================
+// 법령 체계도 (lsStmd)
+// =========================================================
+
+export async function searchLawSystem(
+  oc: string,
+  params: SearchParams
+): Promise<SearchResult<LawSystemListItem>> {
+  const url = buildSearchUrl(oc, "lsStmd", params);
+  const data = await fetchXml(url);
+
+  const root = data.LsStmdSearch as Record<string, unknown> | undefined;
+  if (!root) return { totalCount: 0, currentPage: params.page || 1, items: [] };
+
+  const rawList = ensureArray(root.law as Record<string, unknown>[]);
+  return {
+    totalCount: num(root.totalCnt),
+    currentPage: num(root.page) || params.page || 1,
+    items: rawList.map((raw) => ({
+      id: num(raw.법령일련번호),
+      lawName: str(raw.법령명),
+      lawId: str(raw.법령ID),
+      promulgationDate: str(raw.공포일자),
+      promulgationNumber: str(raw.공포번호),
+      amendmentType: str(raw.제개정구분명),
+      departmentCode: str(raw.소관부처코드),
+      departmentName: str(raw.소관부처명),
+      lawType: str(raw.법령구분명),
+      enforcementDate: str(raw.시행일자),
+      detailLink: str(raw.본문상세링크),
+    })),
+  };
+}
+
+export async function getLawSystemDetail(
+  oc: string,
+  id: number
+): Promise<LawSystemDetail> {
+  const url = buildDetailUrl(oc, "lsStmd", "MST", id);
+  const data = await fetchXml(url);
+
+  const root = data["법령체계도"] as Record<string, unknown> | undefined;
+  if (!root) throw new Error("법령 체계도를 찾을 수 없습니다");
+
+  const basic = root["기본정보"] as Record<string, unknown> || {};
+
+  // 값에서 텍스트 추출 (객체인 경우 #text 추출)
+  function textVal(v: unknown): string {
+    if (!v) return "";
+    if (typeof v === "object" && v !== null) {
+      const obj = v as Record<string, unknown>;
+      return str(obj["#text"] || "");
+    }
+    return str(v);
+  }
+
+  // 상하위법 구조를 재귀적으로 텍스트로 변환
+  function formatHierarchy(node: unknown, depth = 0): string {
+    if (!node || typeof node !== "object") return "";
+    const obj = node as Record<string, unknown>;
+    const parts: string[] = [];
+    const indent = "  ".repeat(depth);
+
+    // 기본정보에서 법령명 추출
+    const info = obj["기본정보"] as Record<string, unknown> | undefined;
+    if (info && typeof info === "object") {
+      const name = textVal(info["법령명"] || info["행정규칙명"] || info["자치법규명"]);
+      const type = textVal(info["법종구분"]);
+      if (name) parts.push(`${indent}${type ? `[${type}] ` : ""}${name}`);
+    }
+
+    // 하위 구조 탐색 (기본정보 및 링크/단순값 필드 제외)
+    const structuralKeys = new Set(["법률", "시행령", "시행규칙", "행정규칙", "자치법규", "고시", "훈령", "예규", "조례", "규칙"]);
+    for (const [key, val] of Object.entries(obj)) {
+      if (key === "기본정보") continue;
+      if (!structuralKeys.has(key)) continue;
+      if (typeof val === "object" && val !== null) {
+        const items = Array.isArray(val) ? val : [val];
+        for (const item of items) {
+          if (typeof item !== "object" || item === null) continue;
+          const sub = formatHierarchy(item, depth + 1);
+          if (sub) {
+            parts.push(`${indent}▸ ${key}`);
+            parts.push(sub);
+          }
+        }
+      }
+    }
+    return parts.join("\n");
+  }
+
+  const hierarchyText = formatHierarchy(root["상하위법"]);
+
+  return {
+    basicInfo: {
+      lawId: str(basic.법령ID),
+      lawSerialNumber: num(basic.법령일련번호),
+      promulgationDate: str(basic.공포일자),
+      promulgationNumber: str(basic.공포번호),
+      lawType: str(basic.법종구분),
+      lawName: str(basic.법령명),
+      enforcementDate: str(basic.시행일자),
+      amendmentType: str(basic.제개정구분),
+    },
+    hierarchy: hierarchyText,
+  };
+}
+
+// =========================================================
+// 3단비교 (thdCmp)
+// =========================================================
+
+export async function searchThreeWayComp(
+  oc: string,
+  params: SearchParams
+): Promise<SearchResult<ThreeWayCompListItem>> {
+  const url = buildSearchUrl(oc, "thdCmp", params);
+  const data = await fetchXml(url);
+
+  const root = data.thdCmpLawSearch as Record<string, unknown> | undefined;
+  if (!root) return { totalCount: 0, currentPage: params.page || 1, items: [] };
+
+  const rawList = ensureArray(root.thdCmp as Record<string, unknown>[]);
+  return {
+    totalCount: num(root.totalCnt),
+    currentPage: num(root.page) || params.page || 1,
+    items: rawList.map((raw) => ({
+      id: num(raw.삼단비교일련번호),
+      lawName: str(raw.법령명한글),
+      lawId: str(raw.법령ID),
+      promulgationDate: str(raw.공포일자),
+      promulgationNumber: str(raw.공포번호),
+      amendmentType: str(raw.제개정구분명),
+      departmentCode: str(raw.소관부처코드),
+      departmentName: str(raw.소관부처명),
+      lawType: str(raw.법령구분명),
+      enforcementDate: str(raw.시행일자),
+      citationLink: str(raw["인용조문_삼단비교상세링크"]),
+      delegationLink: str(raw["위임조문_삼단비교상세링크"]),
+    })),
+  };
+}
+
+export async function getThreeWayCompDetail(
+  oc: string,
+  id: number,
+  knd: 1 | 2 = 1
+): Promise<ThreeWayCompDetail> {
+  const url = new URL(`${BASE_URL}/lawService.do`);
+  url.searchParams.set("OC", oc);
+  url.searchParams.set("target", "thdCmp");
+  url.searchParams.set("type", "XML");
+  url.searchParams.set("MST", String(id));
+  url.searchParams.set("knd", String(knd));
+  const data = await fetchXml(url.toString());
+
+  const root = data.ThdCmpLawXService as Record<string, unknown> | undefined;
+  if (!root) throw new Error("3단비교 정보를 찾을 수 없습니다");
+
+  const basic = root["기본정보"] as Record<string, unknown> || {};
+
+  // 삼단비교 내용을 텍스트로 변환
+  function formatArticles(section: unknown): string {
+    if (!section) return "";
+    const articles = ensureArray((section as Record<string, unknown>)["법률조문"] as Record<string, unknown>[]);
+    return articles.map((a) => {
+      const parts: string[] = [];
+      const joNo = str(a.조번호);
+      const title = str(a.조제목);
+      const content = stripHtmlTags(str(a.조내용));
+      parts.push(`제${joNo}조${title ? ` (${title})` : ""}`);
+      if (content) parts.push(content);
+
+      // 시행규칙조문
+      const ruleArticles = a["시행규칙조문목록"] as Record<string, unknown> | undefined;
+      if (ruleArticles) {
+        const rules = ensureArray(ruleArticles["시행규칙조문"] as Record<string, unknown>[]);
+        for (const r of rules) {
+          parts.push(`  [시행규칙] 제${str(r.조번호)}조${str(r.조제목) ? ` (${str(r.조제목)})` : ""}`);
+          const rc = stripHtmlTags(str(r.조내용));
+          if (rc) parts.push(`  ${rc}`);
+        }
+      }
+
+      // 위임행정규칙
+      const delegated = a["위임행정규칙목록"] as Record<string, unknown> | undefined;
+      if (delegated) {
+        const dRules = ensureArray(delegated["위임행정규칙"] as Record<string, unknown>[]);
+        for (const d of dRules) {
+          parts.push(`  [위임행정규칙] ${str(d.위임행정규칙명)} 제${str(d.위임행정규칙조번호)}조`);
+        }
+      }
+
+      return parts.join("\n");
+    }).join("\n\n");
+  }
+
+  const contentKey = knd === 1 ? "인용조문삼단비교" : "위임조문삼단비교";
+  const contentText = formatArticles(root[contentKey]);
+
+  return {
+    basicInfo: {
+      lawId: str(basic.법령ID),
+      decreeId: str(basic.시행령ID),
+      ruleId: str(basic.시행규칙ID),
+      lawName: str(basic.법령명),
+      decreeName: str(basic.시행령명),
+      ruleName: str(basic.시행규칙명),
+      comparisonExists: str(basic.삼단비교존재여부),
+    },
+    content: contentText,
+  };
+}
+
+// =========================================================
+// 별표서식 (licbyl)
+// =========================================================
+
+export async function searchAttachedForms(
+  oc: string,
+  params: AttachedFormSearchParams
+): Promise<SearchResult<AttachedFormListItem>> {
+  const url = buildSearchUrl(oc, "licbyl", params);
+  const u = new URL(url);
+  if (params.search) u.searchParams.set("search", String(params.search));
+  if (params.knd) u.searchParams.set("knd", String(params.knd));
+
+  const data = await fetchXml(u.toString());
+
+  const root = data.licBylSearch as Record<string, unknown> | undefined;
+  if (!root) return { totalCount: 0, currentPage: params.page || 1, items: [] };
+
+  const rawList = ensureArray(root.licbyl as Record<string, unknown>[]);
+  return {
+    totalCount: num(root.totalCnt),
+    currentPage: num(root.page) || params.page || 1,
+    items: rawList.map((raw) => ({
+      id: num(raw.별표일련번호),
+      relatedLawId: num(raw.관련법령일련번호),
+      formName: str(raw.별표명),
+      relatedLawName: str(raw.관련법령명),
+      formNumber: str(raw.별표번호),
+      formType: str(raw.별표종류),
+      departmentName: str(raw.소관부처명),
+      promulgationDate: str(raw.공포일자),
+      amendmentType: str(raw.제개정구분명),
+      lawType: str(raw.법령종류),
+      fileLink: str(raw.별표서식파일링크),
+      detailLink: str(raw.별표법령상세링크),
+    })),
+  };
+}
+
+// =========================================================
+// 법령명 약칭 (lsAbrv)
+// =========================================================
+
+export async function searchLawAbbreviations(
+  oc: string,
+  params: SearchParams
+): Promise<SearchResult<LawAbbreviationListItem>> {
+  const url = buildSearchUrl(oc, "lsAbrv", params);
+  const data = await fetchXml(url);
+
+  const root = data.LawSearch as Record<string, unknown> | undefined;
+  if (!root) return { totalCount: 0, currentPage: params.page || 1, items: [] };
+
+  const rawList = ensureArray(root.law as Record<string, unknown>[]);
+  return {
+    totalCount: num(root.totalCnt),
+    currentPage: num(root.page) || params.page || 1,
+    items: rawList.map((raw) => ({
+      id: num(raw.법령일련번호),
+      currentHistoryCode: str(raw.현행연혁코드),
+      lawName: str(raw.법령명한글),
+      abbreviation: str(raw.법령약칭명),
+      lawId: str(raw.법령ID),
+      promulgationDate: str(raw.공포일자),
+      promulgationNumber: str(raw.공포번호),
+      amendmentType: str(raw.제개정구분명),
+      registrationDate: str(raw.등록일),
+      departmentCode: str(raw.소관부처코드),
+      departmentName: str(raw.소관부처명),
+      lawType: str(raw.법령구분명),
+      enforcementDate: str(raw.시행일자),
+      selfOtherLaw: str(raw.자법타법여부),
+      detailLink: str(raw.법령상세링크),
+    })),
+  };
+}
+
+// =========================================================
+// 법령 변경이력 (lsHstInf)
+// =========================================================
+
+export async function searchLawChangeHistory(
+  oc: string,
+  params: LawChangeHistoryParams
+): Promise<SearchResult<LawChangeHistoryListItem>> {
+  const url = new URL(`${BASE_URL}/lawSearch.do`);
+  url.searchParams.set("OC", oc);
+  url.searchParams.set("target", "lsHstInf");
+  url.searchParams.set("type", "XML");
+  url.searchParams.set("regDt", params.regDt);
+  if (params.display) url.searchParams.set("display", String(params.display));
+  if (params.page) url.searchParams.set("page", String(params.page));
+
+  const data = await fetchXml(url.toString());
+
+  const root = data.LawSearch as Record<string, unknown> | undefined;
+  if (!root) return { totalCount: 0, currentPage: params.page || 1, items: [] };
+
+  const rawList = ensureArray(root.law as Record<string, unknown>[]);
+  return {
+    totalCount: num(root.totalCnt),
+    currentPage: num(root.page) || params.page || 1,
+    items: rawList.map((raw) => ({
+      id: num(raw.법령일련번호),
+      currentHistoryCode: str(raw.현행연혁코드),
+      lawName: str(raw.법령명한글),
+      lawId: str(raw.법령ID),
+      promulgationDate: str(raw.공포일자),
+      promulgationNumber: str(raw.공포번호),
+      amendmentType: str(raw.제개정구분명),
+      departmentCode: str(raw.소관부처코드),
+      departmentName: str(raw.소관부처명),
+      lawType: str(raw.법령구분명),
+      enforcementDate: str(raw.시행일자),
+      selfOtherLaw: str(raw.자법타법여부),
+      detailLink: str(raw.법령상세링크),
+    })),
+  };
+}
+
+// =========================================================
+// 조항호목 (lawjosub)
+// =========================================================
+
+export async function getLawArticleSub(
+  oc: string,
+  params: LawArticleSubParams
+): Promise<LawArticleSubDetail> {
+  const url = new URL(`${BASE_URL}/lawService.do`);
+  url.searchParams.set("OC", oc);
+  url.searchParams.set("target", "lawjosub");
+  url.searchParams.set("type", "XML");
+  url.searchParams.set("MST", String(params.lawId));
+  url.searchParams.set("JO", params.jo);
+  if (params.hang) url.searchParams.set("HANG", params.hang);
+  if (params.ho) url.searchParams.set("HO", params.ho);
+  if (params.mok) url.searchParams.set("MOK", params.mok);
+
+  const data = await fetchXml(url.toString());
+
+  // 루트 엘리먼트는 법령 또는 Law
+  const root = (data["법령"] || data.Law || data.lawjosub) as Record<string, unknown> | undefined;
+  if (!root) throw new Error("조항호목 정보를 찾을 수 없습니다");
+
+  return {
+    lawKey: str(root.법령키),
+    lawId: str(root.법령ID),
+    promulgationDate: str(root.공포일자),
+    promulgationNumber: str(root.공포번호),
+    language: str(root.언어),
+    lawNameKo: str(root["법령명_한글"]),
+    lawNameHanja: str(root["법령명_한자"]),
+    lawTypeCode: str(root.법종구분코드),
+    lawTypeName: str(root.법종구분명),
+    departmentName: str(root.소관부처),
+    enforcementDate: str(root.시행일자),
+    articleNumber: str(root.조문번호),
+    articleContent: stripHtmlTags(str(root.조문내용)),
+    paragraphNumber: str(root.항번호),
+    paragraphContent: stripHtmlTags(str(root.항내용)),
+    clauseNumber: str(root.호번호),
+    clauseContent: stripHtmlTags(str(root.호내용)),
+    subclauseNumber: str(root.목번호),
+    subclauseContent: stripHtmlTags(str(root.목내용)),
+  };
+}
+
+// =========================================================
+// 지식베이스 법령용어 (lstrmAI)
+// =========================================================
+
+export async function searchAILegalTerms(
+  oc: string,
+  params: SearchParams
+): Promise<SearchResult<AILegalTermListItem>> {
+  const url = buildSearchUrl(oc, "lstrmAI", params);
+  const data = await fetchXml(url);
+
+  const root = data.lstrmAISearch as Record<string, unknown> | undefined;
+  if (!root) return { totalCount: 0, currentPage: params.page || 1, items: [] };
+
+  const rawList = ensureArray(root["법령용어"] as Record<string, unknown>[]);
+  return {
+    totalCount: num(root["검색결과개수"] || root.totalCnt),
+    currentPage: num(root.page) || params.page || 1,
+    items: rawList.map((raw) => ({
+      termName: str(raw.법령용어명),
+      homonymExists: str(raw.동음이의어존재여부),
+      remarks: str(raw.비고),
+      termRelationLink: str(raw.용어간관계링크),
+      articleRelationLink: str(raw.조문간관계링크),
+    })),
+  };
+}
+
+// =========================================================
+// 법령-자치법규 연계 조례 (lnkOrd)
+// =========================================================
+
+export async function searchLinkedOrdinances(
+  oc: string,
+  params: SearchParams
+): Promise<SearchResult<LinkedOrdinanceListItem>> {
+  const url = buildSearchUrl(oc, "lnkOrd", params);
+  const data = await fetchXml(url);
+
+  const root = data.OrdinSearch as Record<string, unknown> | undefined;
+  if (!root) return { totalCount: 0, currentPage: params.page || 1, items: [] };
+
+  const rawList = ensureArray(root.law as Record<string, unknown>[]);
+  return {
+    totalCount: num(root.totalCnt),
+    currentPage: num(root.page) || params.page || 1,
+    items: rawList.map((raw) => ({
+      id: num(raw.자치법규일련번호),
+      ordinanceName: str(raw.자치법규명),
+      ordinanceId: str(raw.자치법규ID),
+      promulgationDate: str(raw.공포일자),
+      promulgationNumber: str(raw.공포번호),
+      amendmentType: str(raw.제개정구분명),
+      ordinanceType: str(raw.자치법규종류),
+      enforcementDate: str(raw.시행일자),
+    })),
+  };
+}
+
+// =========================================================
+// 행정규칙 신구법비교 (admrulOldAndNew)
+// =========================================================
+
+export async function searchAdminRuleOldNew(
+  oc: string,
+  params: SearchParams
+): Promise<SearchResult<AdminRuleOldNewListItem>> {
+  const url = buildSearchUrl(oc, "admrulOldAndNew", params);
+  const data = await fetchXml(url);
+
+  const root = data.OldAndNewLawSearch as Record<string, unknown> | undefined;
+  if (!root) return { totalCount: 0, currentPage: params.page || 1, items: [] };
+
+  const rawList = ensureArray(root.oldAndNew as Record<string, unknown>[]);
+  return {
+    totalCount: num(root.totalCnt),
+    currentPage: num(root.page) || params.page || 1,
+    items: rawList.map((raw) => ({
+      id: num(raw.신구법일련번호),
+      currentHistoryCode: str(raw.현행연혁코드),
+      ruleName: str(raw.신구법명),
+      ruleId: str(raw.신구법ID),
+      issuanceDate: str(raw.발령일자),
+      issuanceNumber: str(raw.발령번호),
+      amendmentType: str(raw.제개정구분명),
+      departmentCode: str(raw.소관부처코드),
+      departmentName: str(raw.소관부처명),
+      lawType: str(raw.법령구분명),
+      enforcementDate: str(raw.시행일자),
+      detailLink: str(raw.신구법상세링크),
+    })),
+  };
+}
+
+export async function getAdminRuleOldNewDetail(
+  oc: string,
+  id: number
+): Promise<AdminRuleOldNewDetail> {
+  const url = buildDetailUrl(oc, "admrulOldAndNew", "ID", id);
+  const data = await fetchXml(url);
+
+  const root = data.OldAndNewService as Record<string, unknown> | undefined;
+  if (!root) throw new Error("행정규칙 신구법비교 정보를 찾을 수 없습니다");
+
+  const oldInfo = root["구조문_기본정보"] as Record<string, unknown> || {};
+  const newInfo = root["신조문_기본정보"] as Record<string, unknown> || {};
+
+  function extractArticles(list: unknown): string {
+    const wrapper = list as Record<string, unknown> | undefined;
+    if (!wrapper) return "";
+    const articles = ensureArray(wrapper["조문"] as Record<string, unknown>[]);
+    return articles.map((a) => stripHtmlTags(str(a["#text"] || a["조문내용"] || JSON.stringify(a)))).join("\n\n");
+  }
+
+  return {
+    oldBasicInfo: {
+      ruleId: str(oldInfo.행정규칙ID || oldInfo.신구법ID),
+      ruleSerialNumber: num(oldInfo.행정규칙일련번호 || oldInfo.신구법일련번호),
+      enforcementDate: str(oldInfo.시행일자),
+      issuanceDate: str(oldInfo.발령일자),
+      issuanceNumber: str(oldInfo.발령번호),
+      isCurrent: str(oldInfo.현행여부),
+      ruleName: str(oldInfo.행정규칙명 || oldInfo.신구법명),
+    },
+    newBasicInfo: {
+      ruleId: str(newInfo.행정규칙ID || newInfo.신구법ID),
+      ruleSerialNumber: num(newInfo.행정규칙일련번호 || newInfo.신구법일련번호),
+      enforcementDate: str(newInfo.시행일자),
+      issuanceDate: str(newInfo.발령일자),
+      issuanceNumber: str(newInfo.발령번호),
+      isCurrent: str(newInfo.현행여부),
+      ruleName: str(newInfo.행정규칙명 || newInfo.신구법명),
+    },
+    oldArticles: extractArticles(root["구조문목록"]),
+    newArticles: extractArticles(root["신조문목록"]),
   };
 }

@@ -1,6 +1,8 @@
 /**
  * 법제처 국가법령정보센터 API 타입 정의
- * 지원 target: law, prec, detc, expc, admrul, ordin, trty, lstrm
+ * 지원 target: law, prec, detc, expc, admrul, ordin, trty, lstrm, elaw,
+ *   decc, oldAndNew, lsStmd, thdCmp, licbyl, lsAbrv, lsHstInf, lawjosub,
+ *   lstrmAI, lnkOrd, admrulOldAndNew, 위원회(11개)
  */
 
 // --- 공통 검색 파라미터 ---
@@ -298,4 +300,299 @@ export interface CommitteeDecisionDetail {
   reason: string; // 이유/조치이유
   summary: string; // 결정요지/판정요지/사건개요 등
   extras: Record<string, string>; // 위원회별 추가 필드
+}
+
+// --- 행정심판례 (decc) ---
+
+export interface AdminAppealListItem {
+  id: number; // 행정심판재결례일련번호
+  caseName: string; // 사건명
+  caseNumber: string; // 사건번호
+  dispositionDate: string; // 처분일자
+  decisionDate: string; // 의결일자
+  dispositionAgency: string; // 처분청
+  decisionAgency: string; // 재결청
+  decisionType: string; // 재결구분명
+  decisionTypeCode: string; // 재결구분코드
+  detailLink: string; // 행정심판례상세링크
+}
+
+export interface AdminAppealDetail {
+  id: number; // 행정심판례일련번호
+  caseName: string; // 사건명
+  caseNumber: string; // 사건번호
+  dispositionDate: string; // 처분일자
+  decisionDate: string; // 의결일자
+  dispositionAgency: string; // 처분청
+  decisionAgency: string; // 재결청
+  decisionTypeName: string; // 재결례유형명
+  ruling: string; // 주문
+  claim: string; // 청구취지
+  reason: string; // 이유
+  summary: string; // 재결요지
+}
+
+// --- 신구법비교 (oldAndNew) ---
+
+export interface OldNewLawListItem {
+  id: number; // 신구법일련번호
+  currentHistoryCode: string; // 현행연혁코드
+  lawName: string; // 신구법명
+  lawId: string; // 신구법ID
+  promulgationDate: string; // 공포일자
+  promulgationNumber: string; // 공포번호
+  amendmentType: string; // 제개정구분명
+  departmentCode: string; // 소관부처코드
+  departmentName: string; // 소관부처명
+  lawType: string; // 법령구분명
+  enforcementDate: string; // 시행일자
+  detailLink: string; // 신구법상세링크
+}
+
+export interface OldNewLawDetail {
+  oldBasicInfo: {
+    lawId: string;
+    lawSerialNumber: number;
+    enforcementDate: string;
+    promulgationDate: string;
+    promulgationNumber: string;
+    isCurrent: string;
+    amendmentType: string;
+    lawName: string;
+    lawType: string;
+  };
+  newBasicInfo: {
+    lawId: string;
+    lawSerialNumber: number;
+    enforcementDate: string;
+    promulgationDate: string;
+    promulgationNumber: string;
+    isCurrent: string;
+    amendmentType: string;
+    lawName: string;
+    lawType: string;
+  };
+  oldArticles: string; // 구조문 텍스트
+  newArticles: string; // 신조문 텍스트
+}
+
+// --- 법령 체계도 (lsStmd) ---
+
+export interface LawSystemListItem {
+  id: number; // 법령일련번호
+  lawName: string; // 법령명
+  lawId: string; // 법령ID
+  promulgationDate: string; // 공포일자
+  promulgationNumber: string; // 공포번호
+  amendmentType: string; // 제개정구분명
+  departmentCode: string; // 소관부처코드
+  departmentName: string; // 소관부처명
+  lawType: string; // 법령구분명
+  enforcementDate: string; // 시행일자
+  detailLink: string; // 본문상세링크
+}
+
+export interface LawSystemDetail {
+  basicInfo: {
+    lawId: string;
+    lawSerialNumber: number;
+    promulgationDate: string;
+    promulgationNumber: string;
+    lawType: string;
+    lawName: string;
+    enforcementDate: string;
+    amendmentType: string;
+  };
+  hierarchy: string; // 상하위법 구조 텍스트
+}
+
+// --- 3단비교 (thdCmp) ---
+
+export interface ThreeWayCompListItem {
+  id: number; // 삼단비교일련번호
+  lawName: string; // 법령명한글
+  lawId: string; // 법령ID
+  promulgationDate: string; // 공포일자
+  promulgationNumber: string; // 공포번호
+  amendmentType: string; // 제개정구분명
+  departmentCode: string; // 소관부처코드
+  departmentName: string; // 소관부처명
+  lawType: string; // 법령구분명
+  enforcementDate: string; // 시행일자
+  citationLink: string; // 인용조문_삼단비교상세링크
+  delegationLink: string; // 위임조문_삼단비교상세링크
+}
+
+export interface ThreeWayCompDetail {
+  basicInfo: {
+    lawId: string;
+    decreeId: string;
+    ruleId: string;
+    lawName: string;
+    decreeName: string;
+    ruleName: string;
+    comparisonExists: string;
+  };
+  content: string; // 삼단비교 내용 텍스트
+}
+
+// --- 별표서식 (licbyl) ---
+
+export interface AttachedFormListItem {
+  id: number; // 별표일련번호
+  relatedLawId: number; // 관련법령일련번호
+  formName: string; // 별표명
+  relatedLawName: string; // 관련법령명
+  formNumber: string; // 별표번호
+  formType: string; // 별표종류
+  departmentName: string; // 소관부처명
+  promulgationDate: string; // 공포일자
+  amendmentType: string; // 제개정구분명
+  lawType: string; // 법령종류
+  fileLink: string; // 별표서식파일링크
+  detailLink: string; // 별표법령상세링크
+}
+
+export interface AttachedFormSearchParams extends SearchParams {
+  search?: 1 | 2 | 3; // 1=별표명, 2=관련법령명, 3=본문
+  knd?: 1 | 2 | 3 | 4 | 5; // 1=별표, 2=서식, 3=별지, 4=기타, 5=미분류
+}
+
+// --- 법령명 약칭 (lsAbrv) ---
+
+export interface LawAbbreviationListItem {
+  id: number; // 법령일련번호
+  currentHistoryCode: string; // 현행연혁코드
+  lawName: string; // 법령명한글
+  abbreviation: string; // 법령약칭명
+  lawId: string; // 법령ID
+  promulgationDate: string; // 공포일자
+  promulgationNumber: string; // 공포번호
+  amendmentType: string; // 제개정구분명
+  registrationDate: string; // 등록일
+  departmentCode: string; // 소관부처코드
+  departmentName: string; // 소관부처명
+  lawType: string; // 법령구분명
+  enforcementDate: string; // 시행일자
+  selfOtherLaw: string; // 자법타법여부
+  detailLink: string; // 법령상세링크
+}
+
+// --- 법령 변경이력 (lsHstInf) ---
+
+export interface LawChangeHistoryListItem {
+  id: number; // 법령일련번호
+  currentHistoryCode: string; // 현행연혁코드
+  lawName: string; // 법령명한글
+  lawId: string; // 법령ID
+  promulgationDate: string; // 공포일자
+  promulgationNumber: string; // 공포번호
+  amendmentType: string; // 제개정구분명
+  departmentCode: string; // 소관부처코드
+  departmentName: string; // 소관부처명
+  lawType: string; // 법령구분명
+  enforcementDate: string; // 시행일자
+  selfOtherLaw: string; // 자법타법여부
+  detailLink: string; // 법령상세링크
+}
+
+export interface LawChangeHistoryParams {
+  regDt: string; // YYYYMMDD (필수)
+  page?: number;
+  display?: number;
+}
+
+// --- 조항호목 (lawjosub) ---
+
+export interface LawArticleSubDetail {
+  lawKey: string; // 법령키
+  lawId: string; // 법령ID
+  promulgationDate: string; // 공포일자
+  promulgationNumber: string; // 공포번호
+  language: string; // 언어
+  lawNameKo: string; // 법령명_한글
+  lawNameHanja: string; // 법령명_한자
+  lawTypeCode: string; // 법종구분코드
+  lawTypeName: string; // 법종구분명
+  departmentName: string; // 소관부처
+  enforcementDate: string; // 시행일자
+  articleNumber: string; // 조문번호
+  articleContent: string; // 조문내용
+  paragraphNumber: string; // 항번호
+  paragraphContent: string; // 항내용
+  clauseNumber: string; // 호번호
+  clauseContent: string; // 호내용
+  subclauseNumber: string; // 목번호
+  subclauseContent: string; // 목내용
+}
+
+export interface LawArticleSubParams {
+  lawId: number; // MST 또는 ID (법령일련번호)
+  jo: string; // 조번호 (6자리, 예: 000100)
+  hang?: string; // 항번호 (6자리)
+  ho?: string; // 호번호 (6자리)
+  mok?: string; // 목번호 (한글 한 글자)
+}
+
+// --- 지식베이스 법령용어 (lstrmAI) ---
+
+export interface AILegalTermListItem {
+  termName: string; // 법령용어명
+  homonymExists: string; // 동음이의어존재여부
+  remarks: string; // 비고
+  termRelationLink: string; // 용어간관계링크
+  articleRelationLink: string; // 조문간관계링크
+}
+
+// --- 법령-자치법규 연계 조례 (lnkOrd) ---
+
+export interface LinkedOrdinanceListItem {
+  id: number; // 자치법규일련번호
+  ordinanceName: string; // 자치법규명
+  ordinanceId: string; // 자치법규ID
+  promulgationDate: string; // 공포일자
+  promulgationNumber: string; // 공포번호
+  amendmentType: string; // 제개정구분명
+  ordinanceType: string; // 자치법규종류
+  enforcementDate: string; // 시행일자
+}
+
+// --- 행정규칙 신구법비교 (admrulOldAndNew) ---
+
+export interface AdminRuleOldNewListItem {
+  id: number; // 신구법일련번호
+  currentHistoryCode: string; // 현행연혁코드
+  ruleName: string; // 신구법명
+  ruleId: string; // 신구법ID
+  issuanceDate: string; // 발령일자
+  issuanceNumber: string; // 발령번호
+  amendmentType: string; // 제개정구분명
+  departmentCode: string; // 소관부처코드
+  departmentName: string; // 소관부처명
+  lawType: string; // 법령구분명
+  enforcementDate: string; // 시행일자
+  detailLink: string; // 신구법상세링크
+}
+
+export interface AdminRuleOldNewDetail {
+  oldBasicInfo: {
+    ruleId: string;
+    ruleSerialNumber: number;
+    enforcementDate: string;
+    issuanceDate: string;
+    issuanceNumber: string;
+    isCurrent: string;
+    ruleName: string;
+  };
+  newBasicInfo: {
+    ruleId: string;
+    ruleSerialNumber: number;
+    enforcementDate: string;
+    issuanceDate: string;
+    issuanceNumber: string;
+    isCurrent: string;
+    ruleName: string;
+  };
+  oldArticles: string;
+  newArticles: string;
 }
