@@ -53,9 +53,13 @@ app.post("/mcp", async (req, res) => {
     const server = createServer(LAW_API_OC);
     await server.connect(transport);
 
+    await transport.handleRequest(req, res, req.body);
+
+    // handleRequest 후 sessionId가 생성되므로 여기서 저장
     if (transport.sessionId) {
       sessions.set(transport.sessionId, transport);
     }
+    return;
   } else {
     // 잘못된 세션 ID
     res.status(404).json({ error: "Session not found" });
