@@ -6,8 +6,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
-    "start:remote": "node dist/remote.js",
+    "start": "node dist/remote.js",
+    "start:stdio": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "dev:remote": "tsx src/remote.ts"
   },
