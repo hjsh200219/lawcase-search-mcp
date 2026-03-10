@@ -323,6 +323,23 @@ AI에게 자연어로 요청하면 이 과정을 자동으로 처리합니다.
 
 ## 설치 및 설정
 
+두 가지 방식으로 사용할 수 있습니다.
+
+### 방법 1: Remote MCP (Claude 모바일/웹 앱)
+
+설치 없이 Claude 앱에서 바로 연결할 수 있습니다.
+
+1. Claude 앱 → **Settings → Connectors**
+2. **Add custom connector** 클릭
+3. URL 입력: `https://korean-law.up.railway.app/mcp`
+4. **Add** 클릭
+
+Claude 모바일 앱, 웹 앱 모두 지원됩니다. Pro/Max 플랜이 필요합니다.
+
+### 방법 2: 로컬 설치 (Claude Desktop / Cursor)
+
+직접 설치하여 로컬에서 실행하는 방식입니다.
+
 ```bash
 git clone https://github.com/hjsh200219/lawcase-search-mcp.git
 cd lawcase-search-mcp
@@ -332,13 +349,13 @@ npm run build
 
 > 처음 설치하시는 분은 [설치 가이드 (초보자용)](INSTALL_GUIDE.md)를 참고하세요.
 
-### 환경변수
+#### 환경변수
 
 | 변수 | 설명 |
 |------|------|
 | `LAW_API_OC` | 법제처 API 인증코드 (필수). [법제처 오픈API](https://open.law.go.kr/LSO/openApi/guideList.do)에서 발급 |
 
-### MCP 설정
+#### MCP 설정
 
 `~/.cursor/mcp.json` 또는 Claude Desktop 설정에 추가:
 
@@ -356,9 +373,59 @@ npm run build
 }
 ```
 
+### 방법 3: OpenAI GPT Actions (커스텀 GPT)
+
+ChatGPT의 커스텀 GPT에서 한국 법령 검색 기능을 사용할 수 있습니다.
+
+1. [ChatGPT](https://chatgpt.com) → **My GPTs** → **Create a GPT**
+2. **Configure** 탭 → **Actions** → **Create new action**
+3. **Import from URL** 클릭 후 입력: `https://korean-law.up.railway.app/openapi.json`
+4. 스키마가 자동으로 로드되면 **Save** 클릭
+
+#### REST API 직접 사용
+
+GPT Actions 외에도 REST API를 직접 호출할 수 있습니다.
+
+```bash
+# 법령 검색
+curl "https://korean-law.up.railway.app/api/search/laws?query=민법"
+
+# 판례 검색 (기간 지정)
+curl "https://korean-law.up.railway.app/api/search/cases?query=손해배상&date_from=20240101&date_to=20241231"
+
+# 법령 상세 조회
+curl "https://korean-law.up.railway.app/api/detail/law/123456"
+```
+
+**REST API 엔드포인트**:
+- 검색: `/api/search/{type}` (laws, cases, constitutional, interpretations 등)
+- 상세: `/api/detail/{type}/{id}` (law, case, constitutional, interpretation 등)
+- OpenAPI 스펙: `/openapi.json`
+
+### 셀프 호스팅 (Remote 서버 직접 운영)
+
+자체 서버에서 Remote MCP를 운영하려면:
+
+```bash
+git clone https://github.com/hjsh200219/lawcase-search-mcp.git
+cd lawcase-search-mcp
+npm install
+npm run build
+
+# 환경변수 설정
+export LAW_API_OC="your_api_oc_here"
+export PORT=3000
+
+# Remote 서버 실행
+npm start
+```
+
+Railway, Render 등 Node.js를 지원하는 플랫폼에 배포할 수 있습니다.
+
 ## 기술 스택
 
 - TypeScript + Node.js
-- `@modelcontextprotocol/sdk` - MCP 프로토콜
+- `@modelcontextprotocol/sdk` - MCP 프로토콜 (Streamable HTTP + stdio)
+- `express` - Remote HTTP 서버
 - `fast-xml-parser` - XML 응답 파싱
 - `zod` - 입력 검증

@@ -7,6 +7,8 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createServer } from "./server.js";
+import { createApiRouter } from "./api-routes.js";
+import { generateOpenApiSpec } from "./openapi.js";
 
 const LAW_API_OC = process.env.LAW_API_OC || "";
 const PORT = parseInt(process.env.PORT || "3000", 10);
@@ -27,6 +29,15 @@ const sessions = new Map<string, StreamableHTTPServerTransport>();
 // Health check
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", server: "law-search", version: "4.0.0" });
+});
+
+// REST API (GPT Actions 등 일반 HTTP 클라이언트용)
+app.use("/api", createApiRouter(LAW_API_OC));
+
+// OpenAPI 스펙 (GPT Actions 임포트용)
+app.get("/openapi.json", (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  res.json(generateOpenApiSpec(baseUrl));
 });
 
 // MCP endpoint — POST (클라이언트 → 서버 메시지)
@@ -96,6 +107,8 @@ app.delete("/mcp", async (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`law-search MCP remote server running on port ${PORT}`);
+  console.log(`law-search remote server running on port ${PORT}`);
   console.log(`MCP endpoint: http://0.0.0.0:${PORT}/mcp`);
+  console.log(`REST API: http://0.0.0.0:${PORT}/api`);
+  console.log(`OpenAPI spec: http://0.0.0.0:${PORT}/openapi.json`);
 });
