@@ -1,6 +1,18 @@
 # Quality Assessment
 
-## Per-File Ratings
+## Overall: B (73/100)
+
+| Dimension | Score | Weight | Weighted |
+|-----------|-------|--------|----------|
+| Type Safety | 90 | 20% | 18 |
+| Error Handling | 85 | 15% | 12.75 |
+| Code Organization | 55 | 15% | 8.25 |
+| Test Coverage | 0 | 20% | 0 |
+| Documentation | 80 | 10% | 8 |
+| API Completeness | 100 | 10% | 10 |
+| Reliability Patterns | 80 | 10% | 8 |
+
+## Per-File Grades
 
 | File | Lines | Grade | Notes |
 |------|-------|-------|-------|
@@ -22,17 +34,31 @@
 | **Data Access** | **B-** | Robust retry/throttle logic. Monolithic file. XML path parsing is brittle. |
 | **Types** | **A** | Comprehensive and well-structured |
 
-## Overall Grade: **B**
+## Blockers to Grade A
 
-### Strengths
+1. **No tests** (0% coverage) - biggest quality gap
+2. **Monolithic files** - `server.ts` and `law-api.ts` need domain-based splitting
+3. **No input validation on REST** - `api-routes.ts` trusts raw query params
+4. **Fragile XML parsing** - no fallback when upstream changes response structure
+
+## Strengths
+
 - Complete type coverage for all API targets
 - Robust error handling with retry and rate-limiting
 - Dual transport (stdio + HTTP) well-implemented
 - Clean separation between MCP tools and REST API
 
-### Improvement Opportunities
+## Improvement Opportunities
+
 - Split `law-api.ts` and `server.ts` by domain (e.g., law, case, constitutional)
 - Add input validation to REST routes
 - Add unit tests (none exist currently)
 - Add logging beyond console.error
 - OpenAPI spec generation could use builder pattern to reduce repetition
+
+## Historical Scores
+
+| Date | Score | Change | Notes |
+|------|-------|--------|-------|
+| 2025-03-27 | B (73) | -- | Initial assessment |
+| 2026-04-03 | B (73) | -- | GC audit: docs consolidated, no code changes |
