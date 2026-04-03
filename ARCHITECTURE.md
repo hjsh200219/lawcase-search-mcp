@@ -58,11 +58,11 @@ lawcase-search-mcp is a Model Context Protocol (MCP) server providing comprehens
 
 | Layer | File(s) | Lines | Responsibility |
 |-------|---------|-------|---------------|
-| **Entrypoint** | `index.ts`, `remote.ts` | 30 + 115 | Process bootstrap, transport init, env validation |
+| **Entrypoint** | `index.ts`, `remote.ts` | 30 + 114 | Process bootstrap, transport init, env validation |
 | **Protocol** | `server.ts` | 1505 | MCP tool registration (42 tools), zod validation, response formatting |
 | **HTTP Adapter** | `api-routes.ts`, `openapi.ts` | 220 + 360 | REST routes for GPT Actions, OpenAPI 3.1 spec |
 | **Data Access** | `law-api.ts` | 1547 | API client: XML fetch, parse, rate-limit, retry, type mapping |
-| **Types** | `types.ts` | 600 | Shared TypeScript interfaces |
+| **Types** | `types.ts` | 598 | Shared TypeScript interfaces |
 
 ## Dependency Rules
 

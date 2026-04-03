@@ -101,12 +101,12 @@ npm run dev:remote   # Dev with tsx (HTTP)
 ```
 src/
   index.ts        # Stdio entrypoint (30 lines)
-  remote.ts       # HTTP entrypoint - Express (115 lines)
+  remote.ts       # HTTP entrypoint - Express (114 lines)
   server.ts       # MCP tool registration - 42 tools (1505 lines)
   api-routes.ts   # REST API routes - GPT Actions (220 lines)
   openapi.ts      # OpenAPI 3.1 spec generator (360 lines)
   law-api.ts      # API client - XML fetch/parse (1547 lines)
-  types.ts        # TypeScript interfaces - 40+ types (600 lines)
+  types.ts        # TypeScript interfaces - 40+ types (598 lines)
 ```
 
 ## Layer Rules
