@@ -62,4 +62,4 @@ LLM context windows are finite. Full legal document texts can be 50,000+ charact
 |-----|---------|
 | [core-beliefs.md](design-docs/core-beliefs.md) | Foundational principles |
 | [layer-rules.md](design-docs/layer-rules.md) | Dependency rules and boundaries |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Full architecture diagram and layers |
+| [ARCHITECTURE.md](../ARCHITECTURE.md) | Full architecture diagram and layers |
