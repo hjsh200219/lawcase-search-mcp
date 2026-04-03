@@ -36,3 +36,4 @@
 | Date | Score | Change | Notes |
 |------|-------|--------|-------|
 | 2025-03-27 | B (73) | -- | Initial assessment |
+| 2026-04-03 | B (73) | -- | GC audit: line counts corrected, no code changes |
