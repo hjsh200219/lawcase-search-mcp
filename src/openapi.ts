@@ -25,8 +25,8 @@ export function generateOpenApiSpec(baseUrl: string) {
   return {
     openapi: "3.1.0",
     info: {
-      title: "대한민국 법령 검색 API",
-      description: "법제처 국가법령정보센터 API를 활용한 법령, 판례, 헌재결정례 등 종합 법률정보 검색 서비스",
+      title: "Public Data MCP - 대한민국 법령 검색 API",
+      description: "대한민국 공공데이터 MCP 서버 - 법제처 국가법령정보센터 API를 활용한 법령, 판례, 헌재결정례 등 종합 법률정보 검색 서비스",
       version: "4.0.0",
     },
     servers: [{ url: baseUrl }],

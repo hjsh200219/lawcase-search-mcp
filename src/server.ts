@@ -1,5 +1,5 @@
 /**
- * 법제처 국가법령정보센터 MCP 서버 - 도구 등록
+ * Public Data MCP 서버 - 도구 등록
  * stdio / remote 진입점에서 공통으로 사용
  */
 
@@ -62,7 +62,7 @@ function errorResponse(label: string, error: unknown) {
 
 export function createServer(LAW_API_OC: string): McpServer {
   const server = new McpServer({
-    name: "law-search",
+    name: "public-data",
     version: "4.0.0",
   });
 

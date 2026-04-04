@@ -1,5 +1,5 @@
 /**
- * 법제처 국가법령정보센터 MCP 서버 - Remote HTTP 진입점
+ * Public Data MCP 서버 - Remote HTTP 진입점
  * Claude 모바일/웹 앱에서 Remote MCP 커넥터로 연결
  */
 
@@ -28,7 +28,7 @@ const sessions = new Map<string, StreamableHTTPServerTransport>();
 
 // Health check
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", server: "law-search", version: "4.0.0" });
+  res.json({ status: "ok", server: "public-data", version: "4.0.0" });
 });
 
 // REST API (GPT Actions 등 일반 HTTP 클라이언트용)
@@ -107,7 +107,7 @@ app.delete("/mcp", async (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`law-search remote server running on port ${PORT}`);
+  console.log(`public-data remote server running on port ${PORT}`);
   console.log(`MCP endpoint: http://0.0.0.0:${PORT}/mcp`);
   console.log(`REST API: http://0.0.0.0:${PORT}/api`);
   console.log(`OpenAPI spec: http://0.0.0.0:${PORT}/openapi.json`);

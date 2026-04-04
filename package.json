@@ -1,7 +1,7 @@
 {
-  "name": "lawcase-search-mcp",
+  "name": "public-data-mcp",
   "version": "1.0.0",
-  "description": "대법원 판례 조회 MCP 서버 (법제처 국가법령정보센터 API)",
+  "description": "대한민국 공공데이터 MCP 서버 (법제처 국가법령정보센터 API)",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -13,8 +13,9 @@
   },
   "keywords": [
     "mcp",
-    "lawcase",
+    "public-data",
     "korea",
+    "law",
     "court"
   ],
   "author": "",

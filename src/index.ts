@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * 법제처 국가법령정보센터 MCP 서버 - stdio 진입점
+ * Public Data MCP 서버 - stdio 진입점
  * Claude Desktop 등 로컬 MCP 클라이언트용
  */
 
