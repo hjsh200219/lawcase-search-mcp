@@ -86,6 +86,33 @@ export interface HealthFoodItem {
   INTAKE_HINT1: string;
 }
 
+// --- 생동성인정품목 ---
+
+export interface BioEquivalenceItem {
+  ITEM_SEQ: string;
+  ITEM_NAME: string;
+  ENTP_NAME: string;
+  INGR_KOR_NAME: string;
+  INGR_QTY: string;
+  SHAPE_CODE_NAME: string;
+  BIOEQ_PRODT_NOTICE_DATE: string;
+}
+
+// --- 의약품 특허정보 ---
+
+export interface MedicinePatentItem {
+  ITEM_SEQ: string;
+  ITEM_NAME: string;
+  ITEM_ENG_NAME: string;
+  ENTP_NAME: string;
+  INGR_KOR_NAME: string;
+  INGR_ENG_NAME: string;
+  PATENT_NO: string;
+  PATENT_DATE: string;
+  PATENT_EXPIRY_DATE: string;
+  DOSAGE_FORM: string;
+}
+
 // --- 사업자등록정보 ---
 
 export interface BusinessValidateRequest {

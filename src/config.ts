@@ -1,0 +1,60 @@
+/**
+ * 환경변수 기반 설정 로더
+ * index.ts / remote.ts 진입점에서 공통 사용
+ */
+
+import type { ServerConfig } from "./server.js";
+
+function collectUnipassKeys(): Record<string, string> {
+  const keys: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    const match = k.match(/^UNIPASS_KEY_API(\d{3})$/);
+    if (match && v) keys[match[1]] = v;
+  }
+  return keys;
+}
+
+export function loadConfig(): ServerConfig {
+  const lawApiOc = process.env.LAW_API_OC || "";
+  const dartApiKey = process.env.DART_API_KEY || "";
+  const data20ServiceKey = process.env.DATA20_SERVICE_KEY || "";
+  const exchangeRateApiKey = process.env.EXCHANGE_RATE_API_KEY || "";
+  const mafraApiKey = process.env.MAFRA_API_KEY || "";
+  const unipassKeys = collectUnipassKeys();
+
+  if (!lawApiOc) {
+    console.error(
+      "LAW_API_OC 환경변수가 설정되지 않았습니다. 법제처 API 인증코드를 설정하세요.",
+    );
+    process.exit(1);
+  }
+
+  if (!dartApiKey) {
+    console.warn("DART_API_KEY 미설정 — DART 공시 도구 비활성화");
+  }
+
+  if (!data20ServiceKey) {
+    console.warn("DATA20_SERVICE_KEY 미설정 — 공공데이터포털 도구 비활성화");
+  }
+
+  if (Object.keys(unipassKeys).length === 0) {
+    console.warn("UNIPASS_KEY_API* 미설정 — UNI-PASS 관세청 도구 비활성화");
+  }
+
+  if (!exchangeRateApiKey) {
+    console.warn("EXCHANGE_RATE_API_KEY 미설정 — 수출입은행 환율 도구 비활성화");
+  }
+
+  if (!mafraApiKey) {
+    console.warn("MAFRA_API_KEY 미설정 — 수입축산물 이력 도구 비활성화");
+  }
+
+  return {
+    lawApiOc,
+    dartApiKey: dartApiKey || undefined,
+    data20ServiceKey: data20ServiceKey || undefined,
+    unipassApiKeys: Object.keys(unipassKeys).length > 0 ? unipassKeys : undefined,
+    eximApiKey: exchangeRateApiKey || undefined,
+    mafraApiKey: mafraApiKey || undefined,
+  };
+}

@@ -6,35 +6,13 @@
 import express from "express";
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createServer, type ServerConfig } from "./server.js";
+import { createServer } from "./server.js";
 import { createApiRouter } from "./api-routes.js";
 import { generateOpenApiSpec } from "./openapi.js";
+import { loadConfig } from "./config.js";
 
-const LAW_API_OC = process.env.LAW_API_OC || "";
-const DART_API_KEY = process.env.DART_API_KEY || "";
-const DATA20_SERVICE_KEY = process.env.DATA20_SERVICE_KEY || "";
+const serverConfig = loadConfig();
 const PORT = parseInt(process.env.PORT || "3000", 10);
-
-if (!LAW_API_OC) {
-  console.error(
-    "LAW_API_OC 환경변수가 설정되지 않았습니다. 법제처 API 인증코드를 설정하세요."
-  );
-  process.exit(1);
-}
-
-if (!DART_API_KEY) {
-  console.warn("DART_API_KEY 미설정 — DART 공시 도구 비활성화");
-}
-
-if (!DATA20_SERVICE_KEY) {
-  console.warn("DATA20_SERVICE_KEY 미설정 — 공공데이터포털 도구 비활성화");
-}
-
-const serverConfig: ServerConfig = {
-  lawApiOc: LAW_API_OC,
-  dartApiKey: DART_API_KEY || undefined,
-  data20ServiceKey: DATA20_SERVICE_KEY || undefined,
-};
 
 const app = express();
 app.use(express.json());
@@ -53,7 +31,14 @@ app.use("/api", createApiRouter(serverConfig));
 // OpenAPI 스펙 (GPT Actions 임포트용)
 app.get("/openapi.json", (req, res) => {
   const baseUrl = `${req.protocol}://${req.get("host")}`;
-  res.json(generateOpenApiSpec(baseUrl, !!serverConfig.dartApiKey, !!serverConfig.data20ServiceKey));
+  res.json(generateOpenApiSpec({
+    baseUrl,
+    hasDart: !!serverConfig.dartApiKey,
+    hasData20: !!serverConfig.data20ServiceKey,
+    hasUnipass: !!(serverConfig.unipassApiKeys && Object.keys(serverConfig.unipassApiKeys).length > 0),
+    hasExim: !!serverConfig.eximApiKey,
+    hasMafra: !!serverConfig.mafraApiKey,
+  }));
 });
 
 // MCP endpoint — POST (클라이언트 → 서버 메시지)

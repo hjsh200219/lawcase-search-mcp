@@ -11,6 +11,8 @@ import {
   searchStockDividend,
   searchRareMedicine,
   searchHealthFood,
+  searchBioEquivalence,
+  searchMedicinePatent,
   verifyBusiness,
   checkBusinessStatus,
 } from "../data20-api.js";
@@ -23,6 +25,8 @@ export function registerData20Tools(server: McpServer, serviceKey: string): void
   registerStockDividendTool(server, serviceKey);
   registerRareMedicineTool(server, serviceKey);
   registerHealthFoodTool(server, serviceKey);
+  registerBioEquivalenceTool(server, serviceKey);
+  registerMedicinePatentTool(server, serviceKey);
   registerBusinessVerifyTool(server, serviceKey);
   registerBusinessStatusTool(server, serviceKey);
 }
@@ -232,7 +236,74 @@ function registerHealthFoodTool(server: McpServer, serviceKey: string): void {
 }
 
 // ========================================
-// 7. 사업자등록 진위확인
+// 7. 생동성인정품목 검색
+// ========================================
+
+function registerBioEquivalenceTool(server: McpServer, serviceKey: string): void {
+  server.tool(
+    "data20_search_bio_equivalence",
+    "생동성인정품목 검색 — 생물학적 동등성이 인정된 의약품(제네릭)의 품목기준코드·성분명·제형 등을 검색합니다.",
+    {
+      item_name: z.string().optional().describe("제품명"),
+      pageNo: z.number().optional().describe("페이지 번호 (기본 1)"),
+      numOfRows: z.number().optional().describe("페이지당 건수 (기본 10)"),
+    },
+    async (params) => {
+      try {
+        const result = await searchBioEquivalence(serviceKey, params);
+        if (result.items.length === 0) {
+          return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
+        }
+
+        const header = `생동성인정품목 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
+        const lines = result.items.map((b) =>
+          `• ${s(b.ITEM_NAME)}\n  업체: ${s(b.ENTP_NAME)}\n  성분: ${s(b.INGR_KOR_NAME)}\n  함량: ${s(b.INGR_QTY)}\n  제형: ${s(b.SHAPE_CODE_NAME)}\n  공고일: ${s(b.BIOEQ_PRODT_NOTICE_DATE)}`,
+        );
+        return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
+      } catch (error) {
+        return errorResponse("생동성인정품목 검색", error);
+      }
+    },
+  );
+}
+
+// ========================================
+// 8. 의약품 특허정보 검색
+// ========================================
+
+function registerMedicinePatentTool(server: McpServer, serviceKey: string): void {
+  server.tool(
+    "data20_search_medicine_patent",
+    "의약품 특허정보 검색 — 의약품 국내 특허번호·특허일자·만료일·성분명 등을 검색합니다.",
+    {
+      item_name: z.string().optional().describe("제품명 (한글)"),
+      item_eng_name: z.string().optional().describe("제품명 (영문)"),
+      ingr_name: z.string().optional().describe("성분명 (한글)"),
+      ingr_eng_name: z.string().optional().describe("성분명 (영문)"),
+      pageNo: z.number().optional().describe("페이지 번호 (기본 1)"),
+      numOfRows: z.number().optional().describe("페이지당 건수 (기본 10)"),
+    },
+    async (params) => {
+      try {
+        const result = await searchMedicinePatent(serviceKey, params);
+        if (result.items.length === 0) {
+          return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
+        }
+
+        const header = `의약품 특허정보 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
+        const lines = result.items.map((p) =>
+          `• ${s(p.ITEM_NAME)}${p.ITEM_ENG_NAME ? ` (${s(p.ITEM_ENG_NAME)})` : ""}\n  업체: ${s(p.ENTP_NAME)}\n  성분: ${s(p.INGR_KOR_NAME)}${p.INGR_ENG_NAME ? ` / ${s(p.INGR_ENG_NAME)}` : ""}\n  특허번호: ${s(p.PATENT_NO)}\n  특허일: ${s(p.PATENT_DATE)}\n  만료일: ${s(p.PATENT_EXPIRY_DATE)}\n  제형: ${s(p.DOSAGE_FORM)}`,
+        );
+        return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
+      } catch (error) {
+        return errorResponse("의약품 특허정보 검색", error);
+      }
+    },
+  );
+}
+
+// ========================================
+// 9. 사업자등록 진위확인
 // ========================================
 
 function registerBusinessVerifyTool(server: McpServer, serviceKey: string): void {

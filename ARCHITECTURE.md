@@ -2,7 +2,7 @@
 
 ## System Overview
 
-public-data-mcp is a Model Context Protocol (MCP) server providing Korean public data search through multiple APIs: 법제처 국가법령정보센터 (21 targets), DART 전자공시시스템 (5 targets), and 공공데이터포털 (8 targets). Total 34 tools across law, corporate disclosure, and public data domains.
+public-data-mcp is a Model Context Protocol (MCP) server providing Korean public data search through multiple APIs: 법제처 국가법령정보센터 (21 targets), DART 전자공시시스템 (5 targets), 공공데이터포털 (8 targets), 관세청 UNI-PASS (52 targets), 수출입은행 환율 (1 target), and 농림축산식품부 (2 targets). Total ~89 tools across law, corporate disclosure, customs, trade, agriculture, and public data domains.
 
 ## High-Level Diagram
 
@@ -22,55 +22,68 @@ public-data-mcp is a Model Context Protocol (MCP) server providing Korean public
 │              │  │  - /health                              │
 └──────┬───────┘  └──┬──────────────┬───────────┬──────────┘
        │             │              │           │
+       │         config.ts (환경변수 수집, ServerConfig)
+       │             │              │           │
        ▼             ▼              ▼           ▼
 ┌──────────────┐ ┌──────────┐ ┌──────────┐
 │  server.ts   │ │api-routes│ │ openapi  │
-│  law tools   │ │ REST API │ │ spec gen │
-│  zod schemas │ │          │ │          │
+│  orchestrate │ │ REST API │ │ spec gen │
 └──────┬───────┘ └────┬─────┘ └──────────┘
        │              │
-       │  ┌───────────────────────┐
-       │  │  tools/               │
-       │  │  dart-tools.ts (5)    │
-       │  │  data20-tools.ts (8)  │
-       │  └───────────┬───────────┘
+       │  ┌────────────────────────────────────┐
+       │  │  tools/                              │
+       │  │  law-tools.ts       (21 tools)       │
+       │  │  dart-tools.ts      (5 tools)        │
+       │  │  data20-tools.ts    (8 tools)        │
+       │  │  unipass-tools.ts → unipass/ (52)    │
+       │  │  exim-tools.ts      (1 tool)         │
+       │  │  mafra-tools.ts     (2 tools)        │
+       │  └───────────┬────────────────────────┘
        │              │
        └──────┬───────┘
               ▼
-┌─────────────────────────────────────────┐
-│  Data Access Layer                       │
-│  law-api.ts    — 법제처 XML API (21 fn)  │
-│  dart-api.ts   — DART JSON API (5 fn)   │
-│  data20-api.ts — 공공데이터 XML/JSON (8) │
-│  shared.ts     — truncate, errorResponse│
-└─────────────────┬───────────────────────┘
+┌─────────────────────────────────────────────┐
+│  Data Access Layer                           │
+│  law-api.ts    — 법제처 XML API (21 fn)      │
+│  dart-api.ts   — DART JSON API (5 fn)       │
+│  data20-api.ts — 공공데이터 XML/JSON (8 fn)  │
+│  unipass-api.ts — 관세청 UNI-PASS XML (42+)  │
+│  exim-api.ts   — 수출입은행 JSON (1 fn)      │
+│  mafra-api.ts  — 농림축산식품부 XML (2 fn)    │
+│  shared.ts     — truncate, errorResponse    │
+└─────────────────┬───────────────────────────┘
                   │
                   ▼
-┌─────────────────────────────────────────┐
-│  Types Layer                             │
-│  types.ts       — 법제처 interfaces      │
-│  dart-types.ts  — DART interfaces       │
-│  data20-types.ts — 공공데이터 interfaces  │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│  Types Layer                                 │
+│  law-types.ts      — 법제처 interfaces       │
+│  dart-types.ts     — DART interfaces        │
+│  data20-types.ts   — 공공데이터 interfaces    │
+│  unipass-types.ts  — UNI-PASS interfaces    │
+│  exim-types.ts     — 수출입은행 interfaces    │
+│  mafra-types.ts    — 농림축산식품부 interfaces │
+└─────────────────────────────────────────────┘
                   │
                   ▼
-┌─────────────────────────────────────────┐
-│  External APIs                           │
-│  law.go.kr  |  opendart.fss.or.kr       │
-│  apis.data.go.kr  |  api.odcloud.kr     │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│  External APIs                               │
+│  law.go.kr  |  opendart.fss.or.kr           │
+│  apis.data.go.kr  |  api.odcloud.kr         │
+│  unipass.customs.go.kr                      │
+│  koreaexim.go.kr  |  data.mafra.go.kr       │
+└─────────────────────────────────────────────┘
 ```
 
 ## Layer Structure
 
 | Layer | File(s) | Lines | Responsibility |
 |-------|---------|-------|---------------|
-| **Entrypoint** | `index.ts`, `remote.ts` | 46 + 130 | Process bootstrap, transport init, env validation |
-| **Protocol** | `server.ts`, `tools/dart-tools.ts`, `tools/data20-tools.ts` | 1509 + 237 + 308 | MCP tool registration, zod validation, response formatting |
-| **HTTP Adapter** | `api-routes.ts`, `openapi.ts` | 353 + 561 | REST routes for GPT Actions, OpenAPI 3.1 spec |
-| **Data Access** | `law-api.ts`, `dart-api.ts`, `data20-api.ts` | 1555 + 292 + 310 | API clients: fetch, parse, rate-limit, retry |
-| **Shared** | `shared.ts` | 18 | Cross-cutting utilities (truncate, errorResponse) |
-| **Types** | `types.ts`, `dart-types.ts`, `data20-types.ts` | 598 + 140 + 116 | TypeScript interfaces per domain |
+| **Entrypoint** | `index.ts`, `remote.ts`, `config.ts` | 23 + 115 + 60 | Process bootstrap, transport init, env validation |
+| **Protocol** | `server.ts`, `tools/` (6 domains) | 52 + 3,685 total | MCP tool registration, zod validation, response formatting |
+| **HTTP Adapter** | `api-routes.ts` + `routes/`, `openapi.ts` + `openapi/` | 40+890, 42+1279 | REST routes, OpenAPI 3.1 spec |
+| **Data Access** | `law-api.ts`, `dart-api.ts`, `data20-api.ts`, `unipass-api.ts`, `exim-api.ts`, `mafra-api.ts` | 1549 + 375 + 355 + 1501 + 82 + 103 | API clients: fetch, parse, rate-limit, retry |
+| **Shared** | `shared.ts`, `http-client.ts` | 18 + 125 | Cross-cutting utilities, shared HTTP client |
+| **Types** | `law-types.ts`, `dart-types.ts`, `data20-types.ts`, `unipass-types.ts`, `exim-types.ts`, `mafra-types.ts` | 598 + 153 + 143 + 574 + 27 + 38 | TypeScript interfaces per domain |
 
 ## Dependency Rules
 
@@ -84,7 +97,7 @@ Entrypoint --> HTTP Adapter --> Data Access --> Shared / Types
 3. Protocol and HTTP Adapter are peers (no cross-imports)
 4. Environment variables only in Entrypoint layer
 5. Types layer has zero runtime dependencies
-6. Domain-specific files (`dart-*`, `data20-*`) follow the same layer rules
+6. Domain-specific files (`dart-*`, `data20-*`, `unipass-*`, `exim-*`, `mafra-*`) follow the same layer rules
 
 See [docs/design-docs/layer-rules.md](docs/design-docs/layer-rules.md) for full rules.
 
@@ -94,19 +107,33 @@ See [docs/design-docs/layer-rules.md](docs/design-docs/layer-rules.md) for full 
 |---------|---------|---------|
 | `@modelcontextprotocol/sdk` | ^1.27.1 | MCP protocol (stdio + Streamable HTTP) |
 | `express` | ^5.2.1 | HTTP server for remote mode |
-| `fast-xml-parser` | ^5.4.1 | XML response parsing (법제처, 공공데이터) |
+| `fast-xml-parser` | ^5.4.1 | XML response parsing (법제처, 공공데이터, UNI-PASS) |
 | `jszip` | ^3.10.1 | DART corpCode ZIP parsing |
 | `zod` | ^4.3.6 | MCP tool input schema validation |
 
-Dev dependencies: `typescript`, `tsx`, `@types/node`, `@types/express`
+Dev dependencies: `typescript`, `tsx`, `@types/node`, `@types/express`, `vitest`
+
+## Test Coverage
+
+| Test File | Tests | Coverage |
+|-----------|-------|---------|
+| `law-api.test.ts` | 41 | 법제처 핵심 10개 API |
+| `unipass-api.test.ts` | 42 | UNI-PASS 42개 API 전수 |
+| `data20-api.test.ts` | 10 | 공공데이터 2개 API |
+| `exim-api.test.ts` | 7 | 수출입은행 전수 |
+| `mafra-api.test.ts` | 8 | 농림축산식품부 전수 |
+| `http-client.test.ts` | 12 | HTTP client 전수 |
+| **합계** | **142** | — |
 
 ## Key Patterns
 
 ### Rate Limiting & Retry
 - 법제처: 1 req/sec throttle, 3 retries with exponential backoff (3s, 6s, 12s)
 - DART: 200ms interval throttle, 2 retries, daily quota tracking (20,000/day)
-- 공공데이터포털: timeout only (retry 미구현 — 개선 예정)
-- 30-second timeout per request via AbortController
+- 공공데이터포털: timeout only (retry 미구현)
+- UNI-PASS: 30s timeout, no retry
+- 수출입은행: 15s timeout, 302 redirect handling
+- 농림축산식품부: 30s timeout, no retry
 
 ### Session Management (HTTP mode)
 - Per-session `StreamableHTTPServerTransport` + `McpServer` instances
@@ -139,4 +166,7 @@ Dev dependencies: `typescript`, `tsx`, `@types/node`, `@types/express`
 | GET | `/api/detail/*` | REST detail endpoints (법제처) |
 | GET | `/api/dart/*` | DART 전자공시 endpoints |
 | GET/POST | `/api/data20/*` | 공공데이터포털 endpoints |
+| GET | `/api/unipass/*` | 관세청 UNI-PASS endpoints |
+| GET | `/api/exim/*` | 수출입은행 환율 endpoints |
+| GET | `/api/mafra/*` | 농림축산식품부 endpoints |
 | GET | `/openapi.json` | OpenAPI 3.1 spec |

@@ -14,7 +14,7 @@ Entrypoint -> Protocol / HTTP Adapter -> Data Access -> Types
 
 ## 3. Single Source of Truth for Types
 
-All TypeScript interfaces live in `types.ts`. Domain objects are never re-declared elsewhere. This prevents drift between MCP tools, REST routes, and the API client.
+Each domain's TypeScript interfaces live in a single dedicated type file: `types.ts` (법제처), `dart-types.ts`, `data20-types.ts`, `unipass-types.ts`, `exim-types.ts`, `mafra-types.ts`. Domain objects are never re-declared elsewhere. This prevents drift between MCP tools, REST routes, and the API client.
 
 ## 4. Fail Loudly at the Edge, Gracefully Inside
 

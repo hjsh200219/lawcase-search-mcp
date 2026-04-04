@@ -9,7 +9,9 @@
     "start": "node dist/remote.js",
     "start:stdio": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "dev:remote": "tsx src/remote.ts"
+    "dev:remote": "tsx src/remote.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "mcp",
@@ -32,6 +34,7 @@
     "@types/jszip": "^3.4.0",
     "@types/node": "^25.3.2",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
   }
 }

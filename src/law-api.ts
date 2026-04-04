@@ -52,7 +52,7 @@ import type {
   LinkedOrdinanceListItem,
   AdminRuleOldNewListItem,
   AdminRuleOldNewDetail,
-} from "./types.js";
+} from "./law-types.js";
 
 const BASE_URL = "http://www.law.go.kr/DRF";
 const TIMEOUT_MS = 30000;
@@ -814,9 +814,6 @@ const COMMITTEE_CONFIG: Record<string, CommitteeConfig> = {
   sfc:    { searchRoot: "Sfc",    itemTag: "sfc",    detailRoot: "SfcService",    name: "증권선물위원회" },
   iaciac: { searchRoot: "Iaciac", itemTag: "iaciac", detailRoot: "IaciacService", name: "산재보험재심사위원회" },
 };
-
-export const COMMITTEE_TYPES = Object.keys(COMMITTEE_CONFIG) as CommitteeType[];
-export type CommitteeType = keyof typeof COMMITTEE_CONFIG;
 
 export function getCommitteeName(committee: string): string {
   return COMMITTEE_CONFIG[committee]?.name || committee;

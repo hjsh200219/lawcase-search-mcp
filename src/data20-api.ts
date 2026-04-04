@@ -11,6 +11,8 @@ import type {
   StockDividendItem,
   RareMedicineItem,
   HealthFoodItem,
+  BioEquivalenceItem,
+  MedicinePatentItem,
   BusinessValidateRequest,
   BusinessValidateResult,
   BusinessStatusResult,
@@ -245,6 +247,49 @@ export async function searchHealthFood(
     {
       type: "json",
       prdlst_nm: params.prdlst_nm || "",
+      pageNo: String(params.pageNo || 1),
+      numOfRows: String(params.numOfRows || 10),
+    },
+  );
+}
+
+// --- 생동성인정품목 검색 ---
+
+export async function searchBioEquivalence(
+  serviceKey: string,
+  params: { item_name?: string; pageNo?: number; numOfRows?: number },
+): Promise<DataGoKrResult<BioEquivalenceItem>> {
+  return fetchJson<BioEquivalenceItem>(
+    "https://apis.data.go.kr/1471000/MdcBioEqInfoService01/getMdcBioEqList01",
+    serviceKey,
+    {
+      type: "json",
+      item_name: params.item_name || "",
+      pageNo: String(params.pageNo || 1),
+      numOfRows: String(params.numOfRows || 10),
+    },
+  );
+}
+
+// --- 의약품 특허정보 검색 ---
+
+export async function searchMedicinePatent(
+  serviceKey: string,
+  params: {
+    item_name?: string; item_eng_name?: string;
+    ingr_name?: string; ingr_eng_name?: string;
+    pageNo?: number; numOfRows?: number;
+  },
+): Promise<DataGoKrResult<MedicinePatentItem>> {
+  return fetchJson<MedicinePatentItem>(
+    "https://apis.data.go.kr/1471000/MdcinPatentInfoService2/getMdcinPatentInfoList2",
+    serviceKey,
+    {
+      type: "json",
+      item_name: params.item_name || "",
+      item_eng_name: params.item_eng_name || "",
+      ingr_name: params.ingr_name || "",
+      ingr_eng_name: params.ingr_eng_name || "",
       pageNo: String(params.pageNo || 1),
       numOfRows: String(params.numOfRows || 10),
     },
