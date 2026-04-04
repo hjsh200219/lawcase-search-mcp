@@ -32,6 +32,7 @@ import {
   getCompanyInfo,
   getFinancialStatements,
   getKeyAccounts,
+  getDisclosureDocument,
 } from "./dart-api.js";
 import {
   searchPharmacy,
@@ -276,6 +277,12 @@ export function createApiRouter(config: ServerConfig): Router {
         bsns_year: String(q.bsns_year || ""),
         reprt_code: String(q.reprt_code || "11011"),
       });
+    }));
+
+    router.get("/dart/document", handle(async (req) => {
+      const rceptNo = String(req.query.rcept_no || "");
+      if (!rceptNo) throw new Error("rcept_no 파라미터가 필요합니다.");
+      return getDisclosureDocument(dartKey, rceptNo);
     }));
   }
 

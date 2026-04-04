@@ -130,6 +130,19 @@ export interface DartKeyAccountResult {
   list: DartKeyAccountItem[];
 }
 
+// --- 공시서류 본문 ---
+
+export interface DartDocumentFile {
+  filename: string;
+  content: string;
+}
+
+export interface DartDocumentResult {
+  rcept_no: string;
+  files: DartDocumentFile[];
+  summary: string;
+}
+
 // --- 고유번호 ---
 
 export interface CorpCodeEntry {

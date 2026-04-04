@@ -11,6 +11,8 @@ import type {
   DartFinancialResult,
   DartFinancialParams,
   DartKeyAccountResult,
+  DartDocumentResult,
+  DartDocumentFile,
   CorpCodeEntry,
 } from "./dart-types.js";
 
@@ -187,6 +189,87 @@ export async function getKeyAccounts(
   url.searchParams.set("reprt_code", params.reprt_code);
 
   return fetchDartJson<DartKeyAccountResult>(url.toString());
+}
+
+// --- 공시서류 본문 조회 ---
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<\/td>/gi, "\t")
+    .replace(/<\/th>/gi, "\t")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#\d+;/g, "")
+    .replace(/\t{2,}/g, "\t")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export async function getDisclosureDocument(
+  apiKey: string,
+  rceptNo: string,
+): Promise<DartDocumentResult> {
+  const url = `${DART_BASE_URL}/document.xml?crtfc_key=${encodeURIComponent(apiKey)}&rcept_no=${encodeURIComponent(rceptNo)}`;
+
+  await throttle();
+  trackRequest();
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+
+    if (!response.ok) {
+      throw new Error(`DART 공시서류 다운로드 실패: HTTP ${response.status}`);
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json") || contentType.includes("text/xml")) {
+      const text = await response.text();
+      if (text.includes('"status"') || text.includes("<status>")) {
+        throw new Error("DART 공시서류를 찾을 수 없습니다. 접수번호를 확인해주세요.");
+      }
+    }
+
+    const buffer = await response.arrayBuffer();
+    const JSZip = (await import("jszip")).default;
+    const zip = await JSZip.loadAsync(buffer);
+
+    const files: DartDocumentFile[] = [];
+    const fileNames = Object.keys(zip.files).filter((f) => !zip.files[f].dir);
+
+    for (const fname of fileNames) {
+      const raw = await zip.files[fname].async("text");
+      const text = stripHtml(raw);
+      if (text.length > 0) {
+        files.push({ filename: fname, content: text });
+      }
+    }
+
+    files.sort((a, b) => b.content.length - a.content.length);
+
+    const mainFile = files[0];
+    const MAX_SUMMARY = 8000;
+    const summary = mainFile
+      ? mainFile.content.substring(0, MAX_SUMMARY) + (mainFile.content.length > MAX_SUMMARY ? "\n\n...(이하 생략)" : "")
+      : "본문을 추출할 수 없습니다.";
+
+    return { rcept_no: rceptNo, files, summary };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // --- 고유번호 (corpCode) 캐시 ---

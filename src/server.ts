@@ -1,5 +1,5 @@
 /**
- * Public Data MCP 서버 - 도구 등록
+ * Korean Public Data MCP 서버 - 도구 등록
  * stdio / remote 진입점에서 공통으로 사용
  */
 

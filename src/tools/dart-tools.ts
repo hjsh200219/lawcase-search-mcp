@@ -10,8 +10,9 @@ import {
   getCompanyInfo,
   getFinancialStatements,
   getKeyAccounts,
+  getDisclosureDocument,
 } from "../dart-api.js";
-import { errorResponse } from "../shared.js";
+import { errorResponse, truncate } from "../shared.js";
 
 export function registerDartTools(server: McpServer, apiKey: string): void {
   // ========================================
@@ -166,7 +167,33 @@ export function registerDartTools(server: McpServer, apiKey: string): void {
   );
 
   // ========================================
-  // 5. 주요계정 조회
+  // 5. 공시서류 본문 조회
+  // ========================================
+  server.tool(
+    "dart_get_document",
+    "DART 공시서류 본문 조회 — 접수번호로 공시서류의 전문(본문)을 조회합니다. dart_search_disclosures로 접수번호를 먼저 확인하세요.",
+    {
+      rcept_no: z.string().describe("접수번호 (14자리). dart_search_disclosures 결과의 접수번호를 사용하세요."),
+    },
+    async ({ rcept_no }) => {
+      try {
+        const result = await getDisclosureDocument(apiKey, rcept_no);
+
+        const header = `## 공시서류 본문 (접수번호: ${rcept_no})\n\n` +
+          `포함 파일: ${result.files.map((f) => f.filename).join(", ")}\n` +
+          `---\n\n`;
+
+        return {
+          content: [{ type: "text", text: truncate(header + result.summary) }],
+        };
+      } catch (error) {
+        return errorResponse("DART 공시서류 조회", error);
+      }
+    },
+  );
+
+  // ========================================
+  // 6. 주요계정 조회
   // ========================================
   server.tool(
     "dart_get_key_accounts",

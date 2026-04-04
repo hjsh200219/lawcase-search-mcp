@@ -88,6 +88,17 @@ export function generateOpenApiSpec(baseUrl: string, hasDart = false, hasData20 
         responses: jsonResponse("주요계정 정보"),
       },
     },
+    "/api/dart/document": {
+      get: {
+        operationId: "dartGetDocument",
+        summary: "DART 공시서류 본문 조회",
+        description: "접수번호로 공시서류의 원문(본문 텍스트)을 조회합니다.",
+        parameters: [
+          { name: "rcept_no", in: "query", required: true, schema: { type: "string" }, description: "접수번호 (14자리)" },
+        ],
+        responses: jsonResponse("공시서류 본문"),
+      },
+    },
   } : {};
 
   const paginationParams = [
@@ -224,7 +235,7 @@ export function generateOpenApiSpec(baseUrl: string, hasDart = false, hasData20 
   return {
     openapi: "3.1.0",
     info: {
-      title: "Public Data MCP - 대한민국 공공데이터 API",
+      title: "Korean Public Data MCP - 대한민국 공공데이터 API",
       description: "대한민국 공공데이터 MCP 서버 - 법제처 국가법령정보센터 및 DART 전자공시시스템 API를 활용한 종합 공공데이터 검색 서비스",
       version: "5.0.0",
     },
