@@ -1,15 +1,10 @@
 /**
- * Korean Public Data MCP 서버 - 도구 등록
- * stdio / remote 진입점에서 공통으로 사용
+ * Korean Public Data MCP 서버 - 스킬 도구 등록
+ * 107개 개별 도구 → 10개 의도 기반 스킬 + MCP Prompts
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerLawTools } from "./tools/law-tools.js";
-import { registerDartTools } from "./tools/dart-tools.js";
-import { registerData20Tools } from "./tools/data20-tools.js";
-import { registerUnipassTools } from "./tools/unipass-tools.js";
-import { registerEximTools } from "./tools/exim-tools.js";
-import { registerMafraTools } from "./tools/mafra-tools.js";
+import { registerSkillTools } from "./tools/skills/index.js";
 
 export interface ServerConfig {
   lawApiOc: string;
@@ -23,30 +18,10 @@ export interface ServerConfig {
 export function createServer(config: ServerConfig): McpServer {
   const server = new McpServer({
     name: "public-data",
-    version: "5.0.0",
+    version: "6.0.0",
   });
 
-  registerLawTools(server, config.lawApiOc);
-
-  if (config.dartApiKey) {
-    registerDartTools(server, config.dartApiKey);
-  }
-
-  if (config.data20ServiceKey) {
-    registerData20Tools(server, config.data20ServiceKey);
-  }
-
-  if (config.unipassApiKeys && Object.keys(config.unipassApiKeys).length > 0) {
-    registerUnipassTools(server, config.unipassApiKeys);
-  }
-
-  if (config.eximApiKey) {
-    registerEximTools(server, config.eximApiKey);
-  }
-
-  if (config.mafraApiKey) {
-    registerMafraTools(server, config.mafraApiKey);
-  }
+  registerSkillTools(server, config);
 
   return server;
 }

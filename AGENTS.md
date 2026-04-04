@@ -25,7 +25,7 @@ src/
   index.ts            # Stdio entrypoint (23 lines)
   remote.ts           # HTTP entrypoint - Express (115 lines)
   config.ts           # 환경변수 수집, ServerConfig 로드 (60 lines)
-  server.ts           # MCP 서버 오케스트레이터 (52 lines)
+  server.ts           # MCP 서버 오케스트레이터 — 스킬 도구 등록 (27 lines)
   api-routes.ts       # REST 라우트 오케스트레이터 (40 lines)
   openapi.ts          # OpenAPI 스펙 오케스트레이터 (42 lines)
   http-client.ts      # 공통 HTTP fetch/retry/throttle (125 lines)
@@ -45,13 +45,27 @@ src/
   routes/             # 도메인별 REST 라우트 (6 files, 890 lines)
   openapi/            # 도메인별 OpenAPI path 생성기 (7 files, 1279 lines)
   tools/
-    law-tools.ts      # 법제처 MCP tools - 21 tools (1484 lines)
-    dart-tools.ts     # DART MCP tools - 5 tools (264 lines)
-    data20-tools.ts   # 공공데이터포털 MCP tools - 8 tools (379 lines)
-    unipass-tools.ts  # UNI-PASS 오케스트레이터 (25 lines)
-    unipass/          # UNI-PASS MCP tools - 52 tools (4 files, 1390 lines)
-    exim-tools.ts     # 수출입은행 MCP tools - 1 tool (49 lines)
-    mafra-tools.ts    # 농림축산식품부 MCP tools - 2 tools (134 lines)
+    skills/           # ★ 10개 의도 기반 스킬 도구 + MCP Prompts (v6)
+      index.ts        # 스킬 오케스트레이터 — 전체 등록
+      _shared.ts      # createDispatcher, requireParam 공통 유틸
+      prompts.ts      # MCP Prompts 워크플로 가이드 (5 prompts)
+      legal-research.ts      # 법령 리서치 (17 actions)
+      case-research.ts       # 판례/해석례 리서치 (10 actions)
+      law-amendment.ts       # 법령 비교/개정 (9 actions)
+      import-clearance.ts    # 수입통관 (20 actions, MAFRA 포함)
+      export-clearance.ts    # 수출통관 (6 actions)
+      shipping-logistics.ts  # 선적/물류 (9 actions)
+      tariff-lookup.ts       # 관세/HS코드/환율 (9 actions, EXIM 포함)
+      trade-entity.ts        # 무역업체 (11 actions)
+      corporate-disclosure.ts # 기업공시 (7 actions, DART + 배당)
+      public-data.ts         # 공공데이터포털 (9 actions)
+    law-tools.ts      # [deprecated] 개별 법제처 도구
+    dart-tools.ts     # [deprecated] 개별 DART 도구
+    data20-tools.ts   # [deprecated] 개별 공공데이터 도구
+    unipass-tools.ts  # [deprecated] 개별 UNI-PASS 도구
+    unipass/          # [deprecated] 개별 UNI-PASS 하위 도구
+    exim-tools.ts     # [deprecated] 개별 수출입은행 도구
+    mafra-tools.ts    # [deprecated] 개별 농림축산식품부 도구
 ```
 
 ## Layer Rules
@@ -60,9 +74,7 @@ src/
 Entrypoint (index.ts, remote.ts)
     |
     v
-Protocol (server.ts, tools/law-tools.ts, tools/dart-tools.ts,
-          tools/data20-tools.ts, tools/unipass-tools.ts,
-          tools/exim-tools.ts, tools/mafra-tools.ts)
+Protocol (server.ts → tools/skills/index.ts)
     +  HTTP Adapter (api-routes.ts, openapi.ts)
     |                          |
     +-----------+--------------+
@@ -70,7 +82,7 @@ Protocol (server.ts, tools/law-tools.ts, tools/dart-tools.ts,
     Data Access (law-api.ts, dart-api.ts, data20-api.ts,
                  unipass-api.ts, exim-api.ts, mafra-api.ts)
                 |
-    Shared (shared.ts)
+    Shared (shared.ts, tools/skills/_shared.ts)
     +  Types (law-types.ts, dart-types.ts, data20-types.ts,
              unipass-types.ts, exim-types.ts, mafra-types.ts)
 ```
@@ -78,7 +90,7 @@ Protocol (server.ts, tools/law-tools.ts, tools/dart-tools.ts,
 - Dependencies flow downward only
 - Environment variables only in entrypoints
 - Domain-specific types/API in separate files (`{domain}-api.ts`, `{domain}-types.ts`)
-- New MCP tools for new domains go in `tools/` directory
+- MCP 스킬 도구는 `tools/skills/` 디렉토리에 구현
 - See [docs/design-docs/layer-rules.md](docs/design-docs/layer-rules.md)
 
 ## Documentation Map
@@ -112,7 +124,8 @@ Protocol (server.ts, tools/law-tools.ts, tools/dart-tools.ts,
 ## Conventions
 
 - Korean comments for domain-specific logic
-- MCP tool names: `snake_case` with domain prefix (`search_laws`, `dart_*`, `data20_*`, `unipass_*`, `exim_*`, `mafra_*`)
+- MCP 스킬 도구: 10개 의도 기반 도구 (v6), 각 도구는 `action` enum으로 세부 동작 선택
+- MCP Prompts: 5개 워크플로 가이드 (수입통관, 기업분석, 법령리서치, HS코드, 수출통관)
 - REST routes: `kebab-case` (e.g., `/api/search/admin-rules`, `/api/dart/*`, `/api/data20/*`, `/api/unipass/*`, `/api/exim/*`, `/api/mafra/*`)
 - Error responses: `isError: true` with Korean messages
 - Domain-specific types in `{domain}-types.ts`, API clients in `{domain}-api.ts`
