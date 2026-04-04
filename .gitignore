@@ -4,3 +4,4 @@ dist/
 *.log
 .omc/
 .DS_Store
+_workspace/
