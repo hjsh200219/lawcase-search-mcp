@@ -99,6 +99,9 @@ function stripHtmlTags(html: string): string {
 
 function str(v: unknown): string {
   if (v === null || v === undefined) return "";
+  if (typeof v === "object" && v !== null && "#text" in v) {
+    return String((v as Record<string, unknown>)["#text"]).trim();
+  }
   return String(v).trim();
 }
 
@@ -291,10 +294,10 @@ export async function getLawDetail(
   if (!root) throw new Error("법령을 찾을 수 없습니다");
 
   const basic = root["기본정보"] as Record<string, unknown> || {};
-  const articles = root["조문"] as Record<string, unknown> | undefined;
+  const articleWrapper = ensureArray(root["조문"] as Record<string, unknown>[])[0] as Record<string, unknown> | undefined;
 
-  const rawArticles = articles
-    ? ensureArray(articles["조문단위"] as Record<string, unknown>[])
+  const rawArticles = articleWrapper
+    ? ensureArray(articleWrapper["조문단위"] as Record<string, unknown>[])
     : [];
 
   return {
@@ -594,10 +597,10 @@ export async function getOrdinanceDetail(
   if (!root) throw new Error("자치법규를 찾을 수 없습니다");
 
   const basic = root["자치법규기본정보"] as Record<string, unknown> || {};
-  const articles = root["조문"] as Record<string, unknown> | undefined;
+  const articleWrapper = ensureArray(root["조문"] as Record<string, unknown>[])[0] as Record<string, unknown> | undefined;
 
-  const rawArticles = articles
-    ? ensureArray(articles["조"] as Record<string, unknown>[])
+  const rawArticles = articleWrapper
+    ? ensureArray(articleWrapper["조"] as Record<string, unknown>[])
     : [];
 
   return {

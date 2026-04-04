@@ -47,7 +47,7 @@ AI(Claude, ChatGPT 등)에게 **"민법 검색해줘"**, **"부당해고 판례 
 **5.** 아래 URL을 입력합니다:
 
 ```
-https://korean-law.up.railway.app/mcp
+https://public-data.up.railway.app/mcp
 ```
 
 **6.** **Add** 를 클릭합니다.
@@ -71,7 +71,7 @@ https://korean-law.up.railway.app/mcp
 **6.** **Import from URL** 을 클릭하고 아래 URL을 입력합니다:
 
 ```
-https://korean-law.up.railway.app/openapi.json
+https://public-data.up.railway.app/openapi.json
 ```
 
 **7.** 스키마가 자동으로 로드되면 **Save** 를 클릭합니다.
@@ -128,7 +128,7 @@ https://korean-law.up.railway.app/openapi.json
 {
   "mcpServers": {
     "public-data": {
-      "url": "https://korean-law.up.railway.app/mcp"
+      "url": "https://public-data.up.railway.app/mcp"
     }
   }
 }
@@ -139,7 +139,7 @@ https://korean-law.up.railway.app/openapi.json
 
 ```json
     "public-data": {
-      "url": "https://korean-law.up.railway.app/mcp"
+      "url": "https://public-data.up.railway.app/mcp"
     }
 ```
 
@@ -245,7 +245,7 @@ https://jsonlint.com
 **Q. ChatGPT에서 Actions 스키마 로드가 안 됩니다.**
 
 - 인터넷 연결을 확인하세요.
-- URL을 정확히 `https://korean-law.up.railway.app/openapi.json` 으로 입력했는지 확인하세요.
+- URL을 정확히 `https://public-data.up.railway.app/openapi.json` 으로 입력했는지 확인하세요.
 
 **Q. 검색 결과가 안 나오거나 오류가 발생합니다.**
 
