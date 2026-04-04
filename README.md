@@ -1,11 +1,13 @@
 # Public Data MCP
 
 대한민국 공공데이터 MCP(Model Context Protocol) 서버입니다.
-법제처 국가법령정보센터 API를 활용하여 법령, 판례, 헌재결정례, 법령해석례, 행정규칙, 자치법규, 조약, 법령용어, 영문법령, 위원회 결정문, 행정심판례, 신구법비교, 법령체계도, 3단비교, 별표서식, 법령약칭, 변경이력, 조항호목, 지식베이스 법령용어, 연계조례, 행정규칙 신구법비교를 검색/조회합니다.
+법제처 국가법령정보센터, DART 전자공시시스템, 공공데이터포털 API를 통합하여 법령·판례·기업공시·생활정보를 검색/조회합니다.
 
 ---
 
 ## 조회 가능 항목
+
+### 법제처 국가법령정보센터 (21개 도구)
 
 | # | 분류 | 검색 도구 | 상세 조회 도구 | 설명 |
 |---|------|-----------|----------------|------|
@@ -30,6 +32,33 @@
 | 19 | 지식베이스 법령용어 | `search_ai_legal_terms` | - | AI 기반 용어·조문 관계 검색 |
 | 20 | 연계 조례 | `search_linked_ordinances` | - | 법령-자치법규 연계 조례 |
 | 21 | 행정규칙 신구법비교 | `search_admin_rule_old_new` | `get_admin_rule_old_new_detail` | 행정규칙 개정 전후 대비 |
+
+### DART 전자공시시스템 (5개 도구, 선택)
+
+> `DART_API_KEY` 환경변수 설정 시 활성화됩니다.
+
+| # | 분류 | 도구 | 설명 |
+|---|------|------|------|
+| 22 | 기업 고유번호 검색 | `dart_resolve_corp_code` | 회사명으로 DART 고유번호 조회 |
+| 23 | 공시보고서 검색 | `dart_search_disclosures` | 기업 공시보고서 목록 조회 |
+| 24 | 기업개황 | `dart_get_company_info` | 대표자, 주소, 업종 등 기본정보 |
+| 25 | 전체 재무제표 | `dart_get_financial_statements` | 재무상태표, 손익계산서 등 |
+| 26 | 주요계정 | `dart_get_key_accounts` | 매출액, 영업이익, 당기순이익 등 |
+
+### 공공데이터포털 (8개 도구, 선택)
+
+> `DATA20_SERVICE_KEY` 환경변수 설정 시 활성화됩니다.
+
+| # | 분류 | 도구 | 설명 |
+|---|------|------|------|
+| 27 | 약국 검색 | `data20_search_pharmacy` | 전국 약국 정보 (지역·약국명) |
+| 28 | 병원 검색 | `data20_search_hospital` | 전국 병원·의원 정보 |
+| 29 | 동물병원 검색 | `data20_search_animal_hospital` | 전국 동물병원 정보 |
+| 30 | 주식배당정보 | `data20_search_stock_dividend` | 상장기업 배당금·배당률 |
+| 31 | 희귀의약품 검색 | `data20_search_rare_medicine` | 희귀의약품 품목·효능 정보 |
+| 32 | 건강기능식품 검색 | `data20_search_health_food` | 건강기능식품 제품 정보 |
+| 33 | 사업자등록 진위확인 | `data20_verify_business` | 사업자번호·대표자명 진위 확인 |
+| 34 | 사업자등록 상태조회 | `data20_check_business_status` | 사업자 상태 (계속/휴업/폐업) |
 
 ---
 
@@ -257,6 +286,39 @@
 
 **상세 조회 시 제공 정보**: 구법/신법 기본정보(행정규칙명, 시행일자, 발령일자), 구조문 목록, 신조문 목록
 
+### 22~26. DART 전자공시시스템
+
+금융감독원 전자공시시스템(DART)의 기업 공시정보를 검색합니다. [DART 오픈API](https://opendart.fss.or.kr)에서 API 키를 발급받아 사용합니다.
+
+**검색 예시**: "삼성전자 공시보고서 검색해줘", "LG에너지솔루션 재무제표 보여줘", "현대차 기업개황 조회"
+
+| 도구 | 설명 | 주요 파라미터 |
+|------|------|---------------|
+| `dart_resolve_corp_code` | 회사명으로 고유번호 검색 | `corp_name` |
+| `dart_search_disclosures` | 공시보고서 목록 | `corp_code`, `bgn_de`, `end_de`, `pblntf_ty` |
+| `dart_get_company_info` | 기업개황 (대표자, 주소 등) | `corp_code` |
+| `dart_get_financial_statements` | 전체 재무제표 | `corp_code`, `bsns_year`, `reprt_code`, `fs_div` |
+| `dart_get_key_accounts` | 주요계정 (매출·영업이익) | `corp_code`, `bsns_year`, `reprt_code` |
+
+> DART 도구 사용 시 `dart_resolve_corp_code`로 먼저 기업 고유번호를 조회한 뒤 다른 도구에 전달합니다.
+
+### 27~34. 공공데이터포털
+
+공공데이터포털(data.go.kr)의 생활·의료·사업자 정보를 검색합니다. [공공데이터포털](https://www.data.go.kr)에서 서비스 키를 발급받아 사용합니다.
+
+**검색 예시**: "강남구 약국 찾아줘", "서울대학교병원 정보", "삼성전자 주식배당 조회", "사업자번호 상태 확인해줘"
+
+| 도구 | 설명 | 주요 파라미터 |
+|------|------|---------------|
+| `data20_search_pharmacy` | 약국 검색 | `Q0`(시도), `Q1`(시군구), `QN`(약국명) |
+| `data20_search_hospital` | 병원 검색 | `yadmNm`(기관명), `clCd`(종별), `dgsbjtCd`(진료과목) |
+| `data20_search_animal_hospital` | 동물병원 검색 | `yadmNm`(기관명), `sidoCd`, `sgguCd` |
+| `data20_search_stock_dividend` | 주식배당정보 | `stckIssuCmpyNm`(회사명), `basDt`(기준일) |
+| `data20_search_rare_medicine` | 희귀의약품 검색 | `item_name`(품목명), `entp_name`(업체명) |
+| `data20_search_health_food` | 건강기능식품 검색 | `prdlst_nm`(제품명) |
+| `data20_verify_business` | 사업자등록 진위확인 | `b_no`, `start_dt`, `p_nm` |
+| `data20_check_business_status` | 사업자등록 상태조회 | `b_no` |
+
 ---
 
 ## 검색 파라미터 레퍼런스
@@ -317,63 +379,52 @@ AI에게 자연어로 요청하면 이 과정을 자동으로 처리합니다.
 
 "해고처분 행정심판 재결례 찾아줘"
 → search_admin_appeals로 검색 → get_admin_appeal_detail로 조회
+
+"삼성전자 2024년 재무제표 보여줘"
+→ dart_resolve_corp_code로 고유번호 조회 → dart_get_financial_statements로 재무제표 조회
+
+"강남구 약국 찾아줘"
+→ data20_search_pharmacy로 지역 기반 약국 검색
+
+"사업자번호 1234567890 상태 확인"
+→ data20_check_business_status로 사업 상태 조회
 ```
 
 ---
 
 ## 설치 및 설정
 
-두 가지 방식으로 사용할 수 있습니다.
+> 처음 사용하시는 분은 [설치 가이드 (초보자용)](INSTALL_GUIDE.md)를 참고하세요.
 
-### 방법 1: Remote MCP (Claude 모바일/웹 앱)
+### 방법 1: Remote MCP (Claude) — 추천
 
 설치 없이 Claude 앱에서 바로 연결할 수 있습니다.
+법령·DART·공공데이터 등 **모든 기능이 포함**되어 있어 별도 API 키 발급이 필요 없습니다.
+
+**Claude 모바일/웹 앱:**
 
 1. Claude 앱 → **Settings → Connectors**
 2. **Add custom connector** 클릭
 3. URL 입력: `https://korean-law.up.railway.app/mcp`
 4. **Add** 클릭
 
-Claude 모바일 앱, 웹 앱 모두 지원됩니다. Pro/Max 플랜이 필요합니다.
+Pro/Max 플랜이 필요합니다.
 
-### 방법 2: 로컬 설치 (Claude Desktop / Cursor)
+**Claude Desktop / Cursor:**
 
-직접 설치하여 로컬에서 실행하는 방식입니다.
-
-```bash
-git clone https://github.com/hjsh200219/public-data-mcp.git
-cd public-data-mcp
-npm install
-npm run build
-```
-
-> 처음 설치하시는 분은 [설치 가이드 (초보자용)](INSTALL_GUIDE.md)를 참고하세요.
-
-#### 환경변수
-
-| 변수 | 설명 |
-|------|------|
-| `LAW_API_OC` | 법제처 API 인증코드 (필수). [법제처 오픈API](https://open.law.go.kr/LSO/openApi/guideList.do)에서 발급 |
-
-#### MCP 설정
-
-`~/.cursor/mcp.json` 또는 Claude Desktop 설정에 추가:
+`claude_desktop_config.json` 또는 `~/.cursor/mcp.json`에 추가:
 
 ```json
 {
   "mcpServers": {
     "public-data": {
-      "command": "node",
-      "args": ["/path/to/public-data-mcp/dist/index.js"],
-      "env": {
-        "LAW_API_OC": "your_api_oc_here"
-      }
+      "url": "https://korean-law.up.railway.app/mcp"
     }
   }
 }
 ```
 
-### 방법 3: OpenAI GPT Actions (커스텀 GPT)
+### 방법 2: OpenAI GPT Actions (커스텀 GPT)
 
 ChatGPT의 커스텀 GPT에서 한국 법령 검색 기능을 사용할 수 있습니다.
 
@@ -402,23 +453,26 @@ curl "https://korean-law.up.railway.app/api/detail/law/123456"
 - 상세: `/api/detail/{type}/{id}` (law, case, constitutional, interpretation 등)
 - OpenAPI 스펙: `/openapi.json`
 
-### 셀프 호스팅 (Remote 서버 직접 운영)
+### 셀프 호스팅 (서버 직접 운영)
 
-자체 서버에서 Remote MCP를 운영하려면:
+자체 서버에서 운영하려면:
 
 ```bash
 git clone https://github.com/hjsh200219/public-data-mcp.git
 cd public-data-mcp
 npm install
 npm run build
-
-# 환경변수 설정
-export LAW_API_OC="your_api_oc_here"
-export PORT=3000
-
-# Remote 서버 실행
 npm start
 ```
+
+#### 환경변수
+
+| 변수 | 필수 | 설명 |
+|------|------|------|
+| `LAW_API_OC` | O | 법제처 API 인증코드. [법제처 오픈API](https://open.law.go.kr/LSO/openApi/guideList.do)에서 발급 |
+| `DART_API_KEY` | X | DART API 키. [DART 오픈API](https://opendart.fss.or.kr)에서 발급 |
+| `DATA20_SERVICE_KEY` | X | 공공데이터포털 서비스 키. [공공데이터포털](https://www.data.go.kr)에서 발급 |
+| `PORT` | X | HTTP 서버 포트 (기본 3000) |
 
 Railway, Render 등 Node.js를 지원하는 플랫폼에 배포할 수 있습니다.
 
@@ -428,4 +482,5 @@ Railway, Render 등 Node.js를 지원하는 플랫폼에 배포할 수 있습니
 - `@modelcontextprotocol/sdk` - MCP 프로토콜 (Streamable HTTP + stdio)
 - `express` - Remote HTTP 서버
 - `fast-xml-parser` - XML 응답 파싱
+- `jszip` - DART 기업코드 ZIP 파싱
 - `zod` - 입력 검증

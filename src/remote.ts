@@ -6,11 +6,13 @@
 import express from "express";
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createServer } from "./server.js";
+import { createServer, type ServerConfig } from "./server.js";
 import { createApiRouter } from "./api-routes.js";
 import { generateOpenApiSpec } from "./openapi.js";
 
 const LAW_API_OC = process.env.LAW_API_OC || "";
+const DART_API_KEY = process.env.DART_API_KEY || "";
+const DATA20_SERVICE_KEY = process.env.DATA20_SERVICE_KEY || "";
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
 if (!LAW_API_OC) {
@@ -20,6 +22,20 @@ if (!LAW_API_OC) {
   process.exit(1);
 }
 
+if (!DART_API_KEY) {
+  console.warn("DART_API_KEY 미설정 — DART 공시 도구 비활성화");
+}
+
+if (!DATA20_SERVICE_KEY) {
+  console.warn("DATA20_SERVICE_KEY 미설정 — 공공데이터포털 도구 비활성화");
+}
+
+const serverConfig: ServerConfig = {
+  lawApiOc: LAW_API_OC,
+  dartApiKey: DART_API_KEY || undefined,
+  data20ServiceKey: DATA20_SERVICE_KEY || undefined,
+};
+
 const app = express();
 app.use(express.json());
 
@@ -28,16 +44,16 @@ const sessions = new Map<string, StreamableHTTPServerTransport>();
 
 // Health check
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", server: "public-data", version: "4.0.0" });
+  res.json({ status: "ok", server: "public-data", version: "5.0.0" });
 });
 
 // REST API (GPT Actions 등 일반 HTTP 클라이언트용)
-app.use("/api", createApiRouter(LAW_API_OC));
+app.use("/api", createApiRouter(serverConfig));
 
 // OpenAPI 스펙 (GPT Actions 임포트용)
 app.get("/openapi.json", (req, res) => {
   const baseUrl = `${req.protocol}://${req.get("host")}`;
-  res.json(generateOpenApiSpec(baseUrl));
+  res.json(generateOpenApiSpec(baseUrl, !!serverConfig.dartApiKey, !!serverConfig.data20ServiceKey));
 });
 
 // MCP endpoint — POST (클라이언트 → 서버 메시지)
@@ -61,7 +77,7 @@ app.post("/mcp", async (req, res) => {
       }
     };
 
-    const server = createServer(LAW_API_OC);
+    const server = createServer(serverConfig);
     await server.connect(transport);
 
     await transport.handleRequest(req, res, req.body);

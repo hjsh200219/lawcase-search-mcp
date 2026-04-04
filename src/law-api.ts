@@ -112,6 +112,13 @@ function ensureArray<T>(v: T | T[] | null | undefined): T[] {
   return [v];
 }
 
+function extractArticles(list: unknown): string {
+  const wrapper = list as Record<string, unknown> | undefined;
+  if (!wrapper) return "";
+  const articles = ensureArray(wrapper["조문"] as Record<string, unknown>[]);
+  return articles.map((a) => stripHtmlTags(str(a["#text"] || a["조문내용"] || JSON.stringify(a)))).join("\n\n");
+}
+
 async function throttle(): Promise<void> {
   const now = Date.now();
   const elapsed = now - lastRequestTime;
@@ -172,12 +179,19 @@ async function fetchXml(url: string): Promise<Record<string, unknown>> {
       return xmlParser.parse(text) as Record<string, unknown>;
     } catch (err) {
       clearTimeout(timeout);
-      // AbortError(타임아웃)도 재시도
-      if (err instanceof DOMException && err.name === "AbortError" && attempt < MAX_RETRIES) {
+      const isAbort = err instanceof DOMException && err.name === "AbortError";
+      const isRetryable = isAbort || (err instanceof TypeError && (err as NodeJS.ErrnoException).message === "fetch failed");
+      if (isRetryable && attempt < MAX_RETRIES) {
+        const cause = (err as { cause?: Error }).cause;
+        const detail = cause ? ` (${cause.message})` : "";
         const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
-        console.error(`법제처 API 타임아웃, ${delay / 1000}초 후 재시도... (${attempt + 1}/${MAX_RETRIES})`);
+        console.error(`법제처 API 요청 실패${detail}, ${delay / 1000}초 후 재시도... (${attempt + 1}/${MAX_RETRIES})`);
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
+      }
+      if (err instanceof TypeError) {
+        const cause = (err as { cause?: Error }).cause;
+        throw new Error(`법제처 API 네트워크 오류: ${cause?.message || err.message}`);
       }
       throw err;
     } finally {
@@ -991,14 +1005,6 @@ export async function getOldNewLawDetail(
   const oldInfo = root["구조문_기본정보"] as Record<string, unknown> || {};
   const newInfo = root["신조문_기본정보"] as Record<string, unknown> || {};
 
-  // 조문목록을 텍스트로 변환
-  function extractArticles(list: unknown): string {
-    const wrapper = list as Record<string, unknown> | undefined;
-    if (!wrapper) return "";
-    const articles = ensureArray(wrapper["조문"] as Record<string, unknown>[]);
-    return articles.map((a) => stripHtmlTags(str(a["#text"] || a["조문내용"] || JSON.stringify(a)))).join("\n\n");
-  }
-
   return {
     oldBasicInfo: {
       lawId: str(oldInfo.법령ID),
@@ -1514,13 +1520,6 @@ export async function getAdminRuleOldNewDetail(
 
   const oldInfo = root["구조문_기본정보"] as Record<string, unknown> || {};
   const newInfo = root["신조문_기본정보"] as Record<string, unknown> || {};
-
-  function extractArticles(list: unknown): string {
-    const wrapper = list as Record<string, unknown> | undefined;
-    if (!wrapper) return "";
-    const articles = ensureArray(wrapper["조문"] as Record<string, unknown>[]);
-    return articles.map((a) => stripHtmlTags(str(a["#text"] || a["조문내용"] || JSON.stringify(a)))).join("\n\n");
-  }
 
   return {
     oldBasicInfo: {

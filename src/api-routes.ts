@@ -26,8 +26,26 @@ import {
   searchLinkedOrdinances,
   searchAdminRuleOldNew, getAdminRuleOldNewDetail,
 } from "./law-api.js";
+import {
+  resolveCorpCode,
+  searchDisclosures,
+  getCompanyInfo,
+  getFinancialStatements,
+  getKeyAccounts,
+} from "./dart-api.js";
+import {
+  searchPharmacy,
+  searchHospital,
+  searchStockDividend,
+  searchRareMedicine,
+  searchHealthFood,
+  verifyBusiness,
+  checkBusinessStatus,
+} from "./data20-api.js";
+import type { ServerConfig } from "./server.js";
 
-export function createApiRouter(oc: string): Router {
+export function createApiRouter(config: ServerConfig): Router {
+  const oc = config.lawApiOc;
   const router = Router();
 
   function sp(q: Record<string, unknown>) {
@@ -215,6 +233,121 @@ export function createApiRouter(oc: string): Router {
   router.get("/detail/admin-rule-old-new/:id", handle(async (req) =>
     getAdminRuleOldNewDetail(oc, Number(req.params.id))
   ));
+
+  // --- DART 전자공시 (DART_API_KEY 존재 시에만 활성화) ---
+
+  if (config.dartApiKey) {
+    const dartKey = config.dartApiKey;
+
+    router.get("/dart/corp-code", handle(async (req) =>
+      resolveCorpCode(dartKey, String(req.query.corp_name || ""))
+    ));
+
+    router.get("/dart/disclosures", handle(async (req) => {
+      const q = req.query as Record<string, unknown>;
+      return searchDisclosures(dartKey, {
+        corp_code: q.corp_code as string | undefined,
+        bgn_de: q.bgn_de as string | undefined,
+        end_de: q.end_de as string | undefined,
+        pblntf_ty: q.pblntf_ty as string | undefined,
+        page_no: Number(q.page_no) || 1,
+        page_count: Number(q.page_count) || 20,
+      });
+    }));
+
+    router.get("/dart/company", handle(async (req) =>
+      getCompanyInfo(dartKey, String(req.query.corp_code || ""))
+    ));
+
+    router.get("/dart/financials", handle(async (req) => {
+      const q = req.query as Record<string, unknown>;
+      return getFinancialStatements(dartKey, {
+        corp_code: String(q.corp_code || ""),
+        bsns_year: String(q.bsns_year || ""),
+        reprt_code: String(q.reprt_code || "11011"),
+        fs_div: (q.fs_div as "OFS" | "CFS") || "CFS",
+      });
+    }));
+
+    router.get("/dart/key-accounts", handle(async (req) => {
+      const q = req.query as Record<string, unknown>;
+      return getKeyAccounts(dartKey, {
+        corp_code: String(q.corp_code || ""),
+        bsns_year: String(q.bsns_year || ""),
+        reprt_code: String(q.reprt_code || "11011"),
+      });
+    }));
+  }
+
+  // --- 공공데이터포털 (DATA20_SERVICE_KEY 존재 시에만 활성화) ---
+
+  if (config.data20ServiceKey) {
+    const d20 = config.data20ServiceKey;
+
+    router.get("/data20/pharmacy", handle(async (req) => {
+      const q = req.query as Record<string, unknown>;
+      return searchPharmacy(d20, {
+        Q0: q.Q0 as string | undefined,
+        Q1: q.Q1 as string | undefined,
+        QN: q.QN as string | undefined,
+        pageNo: Number(q.pageNo) || 1,
+        numOfRows: Number(q.numOfRows) || 10,
+      });
+    }));
+
+    router.get("/data20/hospital", handle(async (req) => {
+      const q = req.query as Record<string, unknown>;
+      return searchHospital(d20, {
+        yadmNm: q.yadmNm as string | undefined,
+        sidoCd: q.sidoCd as string | undefined,
+        sgguCd: q.sgguCd as string | undefined,
+        clCd: q.clCd as string | undefined,
+        dgsbjtCd: q.dgsbjtCd as string | undefined,
+        pageNo: Number(q.pageNo) || 1,
+        numOfRows: Number(q.numOfRows) || 10,
+      });
+    }));
+
+    router.get("/data20/stock-dividend", handle(async (req) => {
+      const q = req.query as Record<string, unknown>;
+      return searchStockDividend(d20, {
+        stckIssuCmpyNm: q.stckIssuCmpyNm as string | undefined,
+        basDt: q.basDt as string | undefined,
+        crno: q.crno as string | undefined,
+        pageNo: Number(q.pageNo) || 1,
+        numOfRows: Number(q.numOfRows) || 10,
+      });
+    }));
+
+    router.get("/data20/rare-medicine", handle(async (req) => {
+      const q = req.query as Record<string, unknown>;
+      return searchRareMedicine(d20, {
+        item_name: q.item_name as string | undefined,
+        entp_name: q.entp_name as string | undefined,
+        pageNo: Number(q.pageNo) || 1,
+        numOfRows: Number(q.numOfRows) || 10,
+      });
+    }));
+
+    router.get("/data20/health-food", handle(async (req) => {
+      const q = req.query as Record<string, unknown>;
+      return searchHealthFood(d20, {
+        prdlst_nm: q.prdlst_nm as string | undefined,
+        pageNo: Number(q.pageNo) || 1,
+        numOfRows: Number(q.numOfRows) || 10,
+      });
+    }));
+
+    router.post("/data20/business-verify", handle(async (req) => {
+      const body = req.body as { businesses?: Array<{ b_no: string; start_dt: string; p_nm: string; b_nm?: string }> };
+      return verifyBusiness(d20, body.businesses || []);
+    }));
+
+    router.post("/data20/business-status", handle(async (req) => {
+      const body = req.body as { b_no?: string[] };
+      return checkBusinessStatus(d20, body.b_no || []);
+    }));
+  }
 
   return router;
 }

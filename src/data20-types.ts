@@ -1,0 +1,116 @@
+/**
+ * 공공데이터포털 (data.go.kr) API 타입 정의
+ * DATA20_SERVICE_KEY 기반 API 공통 타입
+ */
+
+export interface DataGoKrResult<T> {
+  totalCount: number;
+  pageNo: number;
+  numOfRows: number;
+  items: T[];
+}
+
+// --- 약국정보 ---
+
+export interface PharmacyItem {
+  yadmNm: string;
+  addr: string;
+  telno: string;
+  sidoCdNm: string;
+  sgguCdNm: string;
+  emdongNm: string;
+  postNo: string;
+  clCdNm: string;
+  XPos: string;
+  YPos: string;
+}
+
+// --- 병원정보 ---
+
+export interface HospitalItem {
+  yadmNm: string;
+  addr: string;
+  telno: string;
+  sidoCdNm: string;
+  sgguCdNm: string;
+  emdongNm: string;
+  postNo: string;
+  clCd: string;
+  clCdNm: string;
+  dgsbjtCdNm: string;
+  XPos: string;
+  YPos: string;
+  hospUrl: string;
+  estbDd: string;
+  drTotCnt: string;
+}
+
+// --- 주식배당정보 ---
+
+export interface StockDividendItem {
+  basDt: string;
+  crno: string;
+  stckIssuCmpyNm: string;
+  isinCdNm: string;
+  stckParPrc: string;
+  dvdnBasDt: string;
+  cashDvdnPayDt: string;
+  stckGenrDvdnAmt: string;
+  stckGenrCashDvdnRt: string;
+  stckDvdnRcdNm: string;
+}
+
+// --- 희귀의약품정보 ---
+
+export interface RareMedicineItem {
+  PRODT_NAME: string;
+  MANUF_NAME: string;
+  MANUFPLACE_NAME: string;
+  TARGET_DISEASE: string;
+  GOODS_NAME: string;
+  APPOINT_DATE: string;
+  DEVSTEP_YN: string;
+  RARITY_DRUG_APPOINT_NO: string;
+}
+
+// --- 건강식품정보 ---
+
+export interface HealthFoodItem {
+  PRDUCT: string;
+  ENTRPS: string;
+  STTEMNT_NO: string;
+  REGIST_DT: string;
+  DISTB_PD: string;
+  MAIN_FNCTN: string;
+  SRV_USE: string;
+  INTAKE_HINT1: string;
+}
+
+// --- 사업자등록정보 ---
+
+export interface BusinessValidateRequest {
+  b_no: string;
+  start_dt: string;
+  p_nm: string;
+  b_nm?: string;
+}
+
+export interface BusinessValidateResult {
+  b_no: string;
+  valid: string;
+  valid_msg: string;
+  request_param: Record<string, string>;
+  status: Record<string, string>;
+}
+
+export interface BusinessStatusResult {
+  b_no: string;
+  b_stt: string;
+  b_stt_cd: string;
+  tax_type: string;
+  tax_type_cd: string;
+  end_dt: string;
+  utcc_yn: string;
+  tax_type_change_dt: string;
+  invoice_apply_dt: string;
+}

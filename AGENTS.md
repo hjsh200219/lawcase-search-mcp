@@ -1,6 +1,12 @@
-# lawcase-search-mcp
+---
+description: Public Data MCP 프로젝트 규칙 - 한국 공공데이터 MCP 서버
+globs:
+alwaysApply: true
+---
 
-Korean legal information MCP server (법제처 국가법령정보센터 API).
+# public-data-mcp
+
+Korean public data MCP server (법제처 + DART 전자공시 + 공공데이터포털).
 
 ## Quick Start
 
@@ -16,13 +22,21 @@ npm run dev:remote   # Dev with tsx (HTTP)
 
 ```
 src/
-  index.ts        # Stdio entrypoint (30 lines)
-  remote.ts       # HTTP entrypoint - Express (114 lines)
-  server.ts       # MCP tool registration - 42 tools (1505 lines)
-  api-routes.ts   # REST API routes - GPT Actions (220 lines)
-  openapi.ts      # OpenAPI 3.1 spec generator (360 lines)
-  law-api.ts      # API client - XML fetch/parse (1547 lines)
-  types.ts        # TypeScript interfaces - 40+ types (598 lines)
+  index.ts          # Stdio entrypoint (46 lines)
+  remote.ts         # HTTP entrypoint - Express (130 lines)
+  server.ts         # MCP tool registration - law-api tools (1509 lines)
+  api-routes.ts     # REST API routes - GPT Actions (353 lines)
+  openapi.ts        # OpenAPI 3.1 spec generator (561 lines)
+  shared.ts         # Shared utilities - truncate, errorResponse (18 lines)
+  law-api.ts        # 법제처 API client - XML fetch/parse (1555 lines)
+  types.ts          # 법제처 TypeScript interfaces (598 lines)
+  dart-api.ts       # DART 전자공시 API client (292 lines)
+  dart-types.ts     # DART TypeScript interfaces (140 lines)
+  data20-api.ts     # 공공데이터포털 API client (310 lines)
+  data20-types.ts   # 공공데이터포털 TypeScript interfaces (116 lines)
+  tools/
+    dart-tools.ts   # DART MCP tool registration - 5 tools (237 lines)
+    data20-tools.ts # 공공데이터포털 MCP tool registration - 8 tools (308 lines)
 ```
 
 ## Layer Rules
@@ -31,18 +45,20 @@ src/
 Entrypoint (index.ts, remote.ts)
     |
     v
-Protocol (server.ts)  +  HTTP Adapter (api-routes.ts, openapi.ts)
+Protocol (server.ts, tools/dart-tools.ts, tools/data20-tools.ts)
+    +  HTTP Adapter (api-routes.ts, openapi.ts)
     |                          |
     +-----------+--------------+
                 |
-           Data Access (law-api.ts)
+    Data Access (law-api.ts, dart-api.ts, data20-api.ts)
                 |
-           Types (types.ts)
+    Shared (shared.ts)  +  Types (types.ts, dart-types.ts, data20-types.ts)
 ```
 
 - Dependencies flow downward only
 - Environment variables only in entrypoints
-- New types go in `types.ts`, new API functions in `law-api.ts`
+- Domain-specific types/API in separate files (`dart-*.ts`, `data20-*.ts`)
+- New MCP tools for new domains go in `tools/` directory
 - See [docs/design-docs/layer-rules.md](docs/design-docs/layer-rules.md)
 
 ## Documentation Map
@@ -82,13 +98,15 @@ Protocol (server.ts)  +  HTTP Adapter (api-routes.ts, openapi.ts)
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `LAW_API_OC` | Yes | law.go.kr API authentication code |
+| `DART_API_KEY` | No | DART 전자공시 API key (없으면 DART 도구 비활성화) |
+| `DATA20_SERVICE_KEY` | No | 공공데이터포털 service key (없으면 공공데이터 도구 비활성화) |
 | `PORT` | No | HTTP server port (default: 3000) |
 
 ## Conventions
 
 - Korean comments for domain-specific logic
-- MCP tool names: `snake_case` (e.g., `search_laws`)
-- REST routes: `kebab-case` (e.g., `/api/search/admin-rules`)
+- MCP tool names: `snake_case` with domain prefix (`search_laws`, `dart_*`, `data20_*`)
+- REST routes: `kebab-case` (e.g., `/api/search/admin-rules`, `/api/dart/*`, `/api/data20/*`)
 - Error responses: `isError: true` with Korean messages
-- All types defined in `types.ts` only
+- Domain-specific types in `{domain}-types.ts`, API clients in `{domain}-api.ts`
 - Content truncated at 8000 chars for MCP responses

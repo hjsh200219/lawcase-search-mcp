@@ -2,7 +2,7 @@
  * OpenAPI 3.1 스펙 생성 - GPT Actions용
  */
 
-export function generateOpenApiSpec(baseUrl: string) {
+export function generateOpenApiSpec(baseUrl: string, hasDart = false, hasData20 = false) {
   const searchParams = {
     query: { name: "query", in: "query", required: true, schema: { type: "string" }, description: "검색어" },
     page: { name: "page", in: "query", schema: { type: "integer", default: 1 }, description: "페이지 번호" },
@@ -22,12 +22,211 @@ export function generateOpenApiSpec(baseUrl: string) {
     "500": { description: "서버 오류", content: { "application/json": { schema: { type: "object", properties: { error: { type: "string" } } } } } },
   });
 
+  const dartPaths = hasDart ? {
+    "/api/dart/corp-code": {
+      get: {
+        operationId: "dartResolveCorpCode",
+        summary: "DART 기업 고유번호 검색",
+        description: "회사명으로 DART 기업 고유번호를 조회합니다.",
+        parameters: [
+          { name: "corp_name", in: "query", required: true, schema: { type: "string" }, description: "검색할 회사명" },
+        ],
+        responses: jsonResponse("기업 고유번호 검색 결과"),
+      },
+    },
+    "/api/dart/disclosures": {
+      get: {
+        operationId: "dartSearchDisclosures",
+        summary: "DART 공시보고서 검색",
+        description: "기업 공시보고서 목록을 조회합니다.",
+        parameters: [
+          { name: "corp_code", in: "query", schema: { type: "string" }, description: "DART 고유번호 (8자리)" },
+          { name: "bgn_de", in: "query", schema: { type: "string", pattern: "^\\d{8}$" }, description: "시작일 (YYYYMMDD)" },
+          { name: "end_de", in: "query", schema: { type: "string", pattern: "^\\d{8}$" }, description: "종료일 (YYYYMMDD)" },
+          { name: "pblntf_ty", in: "query", schema: { type: "string", enum: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"] }, description: "공시유형" },
+          { name: "page_no", in: "query", schema: { type: "integer", default: 1 }, description: "페이지 번호" },
+          { name: "page_count", in: "query", schema: { type: "integer", default: 20 }, description: "페이지당 건수" },
+        ],
+        responses: jsonResponse("공시보고서 검색 결과"),
+      },
+    },
+    "/api/dart/company": {
+      get: {
+        operationId: "dartGetCompanyInfo",
+        summary: "DART 기업개황 조회",
+        description: "기업 기본정보(대표자, 주소, 업종 등)를 조회합니다.",
+        parameters: [
+          { name: "corp_code", in: "query", required: true, schema: { type: "string" }, description: "DART 고유번호 (8자리)" },
+        ],
+        responses: jsonResponse("기업개황 정보"),
+      },
+    },
+    "/api/dart/financials": {
+      get: {
+        operationId: "dartGetFinancials",
+        summary: "DART 전체 재무제표 조회",
+        description: "기업의 전체 재무제표(재무상태표, 손익계산서 등)를 조회합니다.",
+        parameters: [
+          { name: "corp_code", in: "query", required: true, schema: { type: "string" }, description: "DART 고유번호" },
+          { name: "bsns_year", in: "query", required: true, schema: { type: "string" }, description: "사업연도 (YYYY)" },
+          { name: "reprt_code", in: "query", required: true, schema: { type: "string", enum: ["11013", "11012", "11014", "11011"] }, description: "보고서코드 (11013:1분기, 11012:반기, 11014:3분기, 11011:사업보고서)" },
+          { name: "fs_div", in: "query", schema: { type: "string", enum: ["OFS", "CFS"], default: "CFS" }, description: "재무제표구분" },
+        ],
+        responses: jsonResponse("전체 재무제표"),
+      },
+    },
+    "/api/dart/key-accounts": {
+      get: {
+        operationId: "dartGetKeyAccounts",
+        summary: "DART 주요계정 조회",
+        description: "매출액, 영업이익, 당기순이익 등 핵심 재무지표를 조회합니다.",
+        parameters: [
+          { name: "corp_code", in: "query", required: true, schema: { type: "string" }, description: "DART 고유번호" },
+          { name: "bsns_year", in: "query", required: true, schema: { type: "string" }, description: "사업연도 (YYYY)" },
+          { name: "reprt_code", in: "query", required: true, schema: { type: "string", enum: ["11013", "11012", "11014", "11011"] }, description: "보고서코드" },
+        ],
+        responses: jsonResponse("주요계정 정보"),
+      },
+    },
+  } : {};
+
+  const paginationParams = [
+    { name: "pageNo", in: "query", schema: { type: "integer", default: 1 }, description: "페이지 번호" },
+    { name: "numOfRows", in: "query", schema: { type: "integer", default: 10 }, description: "페이지당 건수" },
+  ];
+
+  const data20Paths = hasData20 ? {
+    "/api/data20/pharmacy": {
+      get: {
+        operationId: "data20SearchPharmacy",
+        summary: "약국 검색",
+        description: "전국 약국 정보를 지역명·약국명으로 검색합니다.",
+        parameters: [
+          { name: "Q0", in: "query", schema: { type: "string" }, description: "시도명" },
+          { name: "Q1", in: "query", schema: { type: "string" }, description: "시군구명" },
+          { name: "QN", in: "query", schema: { type: "string" }, description: "약국명" },
+          ...paginationParams,
+        ],
+        responses: jsonResponse("약국 검색 결과"),
+      },
+    },
+    "/api/data20/hospital": {
+      get: {
+        operationId: "data20SearchHospital",
+        summary: "병원 검색",
+        description: "전국 병원·의원 정보를 기관명·지역·종별·진료과목으로 검색합니다.",
+        parameters: [
+          { name: "yadmNm", in: "query", schema: { type: "string" }, description: "기관명" },
+          { name: "sidoCd", in: "query", schema: { type: "string" }, description: "시도코드" },
+          { name: "sgguCd", in: "query", schema: { type: "string" }, description: "시군구코드" },
+          { name: "clCd", in: "query", schema: { type: "string" }, description: "종별코드" },
+          { name: "dgsbjtCd", in: "query", schema: { type: "string" }, description: "진료과목코드" },
+          ...paginationParams,
+        ],
+        responses: jsonResponse("병원 검색 결과"),
+      },
+    },
+    "/api/data20/stock-dividend": {
+      get: {
+        operationId: "data20SearchStockDividend",
+        summary: "주식배당정보 조회",
+        description: "상장기업의 주식 배당금·배당률 정보를 조회합니다.",
+        parameters: [
+          { name: "stckIssuCmpyNm", in: "query", schema: { type: "string" }, description: "회사명" },
+          { name: "basDt", in: "query", schema: { type: "string", pattern: "^\\d{8}$" }, description: "기준일자 (YYYYMMDD)" },
+          { name: "crno", in: "query", schema: { type: "string" }, description: "법인등록번호" },
+          ...paginationParams,
+        ],
+        responses: jsonResponse("주식배당정보"),
+      },
+    },
+    "/api/data20/rare-medicine": {
+      get: {
+        operationId: "data20SearchRareMedicine",
+        summary: "희귀의약품 검색",
+        description: "희귀의약품의 품목명·업체명·효능효과 등을 검색합니다.",
+        parameters: [
+          { name: "item_name", in: "query", schema: { type: "string" }, description: "품목명" },
+          { name: "entp_name", in: "query", schema: { type: "string" }, description: "업체명" },
+          ...paginationParams,
+        ],
+        responses: jsonResponse("희귀의약품 검색 결과"),
+      },
+    },
+    "/api/data20/health-food": {
+      get: {
+        operationId: "data20SearchHealthFood",
+        summary: "건강기능식품 검색",
+        description: "건강기능식품의 제품명·업체명·원재료 등을 검색합니다.",
+        parameters: [
+          { name: "prdlst_nm", in: "query", schema: { type: "string" }, description: "제품명" },
+          ...paginationParams,
+        ],
+        responses: jsonResponse("건강기능식품 검색 결과"),
+      },
+    },
+    "/api/data20/business-verify": {
+      post: {
+        operationId: "data20VerifyBusiness",
+        summary: "사업자등록 진위확인",
+        description: "사업자등록번호·대표자명·개업일자로 진위를 확인합니다.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  businesses: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        b_no: { type: "string", description: "사업자등록번호 (10자리)" },
+                        start_dt: { type: "string", description: "개업일자 (YYYYMMDD)" },
+                        p_nm: { type: "string", description: "대표자명" },
+                        b_nm: { type: "string", description: "상호명" },
+                      },
+                      required: ["b_no", "start_dt", "p_nm"],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: jsonResponse("사업자등록 진위확인 결과"),
+      },
+    },
+    "/api/data20/business-status": {
+      post: {
+        operationId: "data20CheckBusinessStatus",
+        summary: "사업자등록 상태조회",
+        description: "사업자등록번호로 사업 상태(계속/휴업/폐업)를 조회합니다.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  b_no: { type: "array", items: { type: "string" }, description: "사업자등록번호 배열" },
+                },
+              },
+            },
+          },
+        },
+        responses: jsonResponse("사업자등록 상태조회 결과"),
+      },
+    },
+  } : {};
+
   return {
     openapi: "3.1.0",
     info: {
-      title: "Public Data MCP - 대한민국 법령 검색 API",
-      description: "대한민국 공공데이터 MCP 서버 - 법제처 국가법령정보센터 API를 활용한 법령, 판례, 헌재결정례 등 종합 법률정보 검색 서비스",
-      version: "4.0.0",
+      title: "Public Data MCP - 대한민국 공공데이터 API",
+      description: "대한민국 공공데이터 MCP 서버 - 법제처 국가법령정보센터 및 DART 전자공시시스템 API를 활용한 종합 공공데이터 검색 서비스",
+      version: "5.0.0",
     },
     servers: [{ url: baseUrl }],
     paths: {
@@ -355,6 +554,8 @@ export function generateOpenApiSpec(baseUrl: string) {
           responses: jsonResponse("행정규칙 신구법비교 상세 정보"),
         },
       },
+      ...dartPaths,
+      ...data20Paths,
     },
   };
 }

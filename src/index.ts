@@ -6,9 +6,11 @@
  */
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createServer } from "./server.js";
+import { createServer, type ServerConfig } from "./server.js";
 
 const LAW_API_OC = process.env.LAW_API_OC || "";
+const DART_API_KEY = process.env.DART_API_KEY || "";
+const DATA20_SERVICE_KEY = process.env.DATA20_SERVICE_KEY || "";
 
 if (!LAW_API_OC) {
   console.error(
@@ -17,7 +19,21 @@ if (!LAW_API_OC) {
   process.exit(1);
 }
 
-const server = createServer(LAW_API_OC);
+if (!DART_API_KEY) {
+  console.warn("DART_API_KEY 미설정 — DART 공시 도구 비활성화");
+}
+
+if (!DATA20_SERVICE_KEY) {
+  console.warn("DATA20_SERVICE_KEY 미설정 — 공공데이터포털 도구 비활성화");
+}
+
+const serverConfig: ServerConfig = {
+  lawApiOc: LAW_API_OC,
+  dartApiKey: DART_API_KEY || undefined,
+  data20ServiceKey: DATA20_SERVICE_KEY || undefined,
+};
+
+const server = createServer(serverConfig);
 
 async function main() {
   const transport = new StdioServerTransport();
