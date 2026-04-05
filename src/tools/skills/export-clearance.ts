@@ -203,7 +203,7 @@ export function registerExportClearance(
     "수출 통관 — 수출이행내역, 수출신고필증 검증, 차대번호별 수출, 적재지 검사, 전자상거래 적재, 반출신고 등 수출통관 도구",
     {
       action: z.enum(ACTIONS).describe(
-        "export_performance=수출실적 | loading_inspection=적재검사 | export_declaration=수출신고조회(ref_year필수) | export_progress=수출통관진행(ref_year필수) | drawback_detail=관세환급상세 | drawback_progress=환급진행조회",
+        "export_performance=수출이행내역(export_declaration_no필수) | verify_export=수출신고필증검증(pubs_no필수) | export_by_vehicle=차대번호수출이행(vehicle_no필수) | loading_inspection=적재지검사(export_declaration_no필수) | ecommerce_export_load=전자상거래적재이행(ecommerce_decl_no필수) | bonded_release=보세구역반출신고(business_no필수)",
       ),
       export_declaration_no: z.string().optional().describe("수출신고번호 (export_performance, loading_inspection)"),
       pubs_no: z.string().optional().describe("수출신고확인서발급번호 (verify_export)"),

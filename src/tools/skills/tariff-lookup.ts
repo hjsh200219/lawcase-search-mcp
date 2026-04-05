@@ -257,7 +257,7 @@ export function registerTariffLookup(
     "관세율·HS코드·환율 통합 조회 — HS코드 검색, 관세율 조회, 관세환율, 시장환율, 간이환급율, 통계부호, HS 내비게이션 등을 하나의 도구로 제공합니다.",
     {
       action: z.enum(ACTIONS).describe(
-        "search_hs=HS부호검색 | tariff_rate=관세율조회 | simple_drawback=간이환급률 | tax_exchange_rate=과세환율 | export_period_short=수출기간단축 | hs_navigation=HS부호체계탐색 | hs_detail=HS상세정보 | reconciliation_rate=조정관세율 | exchange_rate=수출입은행환율(날짜필수)",
+        "search_hs=HS부호검색(hs_code필수) | tariff_rate=관세율조회(hs_code필수) | customs_rate=관세환율(currencies선택) | simple_drawback=간이환급률(base_date필수) | simple_drawback_company=간이정액적용업체(business_no필수) | export_period_short=수출기간단축(hs_code필수) | statistics_code=통계부호(code_type필수) | hs_navigation=HS부호체계탐색(hs_code필수) | market_exchange=수출입은행시장환율(date선택)",
       ),
       hs_code: z.string().optional().describe("HS 부호 (search_hs, tariff_rate, simple_drawback, export_period_short, hs_navigation에서 사용)"),
       currencies: z.array(z.string()).optional().describe("통화 코드 배열 (customs_rate에서 사용, 예: [\"USD\", \"EUR\"])"),

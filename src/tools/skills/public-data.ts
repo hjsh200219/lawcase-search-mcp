@@ -261,7 +261,7 @@ export function registerPublicData(
     "공공데이터 — 약국, 병원, 동물병원, 희귀의약품, 건강식품, 생동성인정품목, 의약품 특허, 사업자등록 진위확인/상태조회 통합 도구",
     {
       action: z.enum(ACTIONS).describe(
-        "search_company=기업정보검색(company_name필수) | search_pharmacy=약국검색(Q0/Q1) | search_medicine=의약품검색(item_name) | search_hospital=병원검색(Q0/Q1) | search_food_safety=식품안전검색(prdlst_nm) | search_pension=국민연금검색(wkpl_nm) | search_medical_device=의료기기검색(item_name) | search_livestock_price=축산물가격검색(ENTRP_NM) | exchange_rate=수출입은행환율(search_date필수)",
+        "search_pharmacy=약국검색(Q0=시도명) | search_hospital=병원검색(yadmNm=병원명) | search_animal_hospital=동물병원검색(QN=병원명) | search_rare_medicine=희귀의약품검색(item_name) | search_health_food=건강기능식품검색(prdlst_nm) | search_bio_equivalence=생동성인정품목검색(item_name) | search_medicine_patent=의약품특허정보검색(item_name) | verify_business=사업자등록진위확인(b_no필수) | check_business_status=사업자등록상태조회(b_no필수)",
       ),
       Q0: z.string().optional().describe("시도명 (search_pharmacy)"),
       Q1: z.string().optional().describe("시군구명 (search_pharmacy)"),

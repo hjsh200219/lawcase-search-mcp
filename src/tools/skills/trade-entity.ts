@@ -308,7 +308,7 @@ export function registerTradeEntity(
     "무역 업체 — 통관업체, 관세사, 포워더, 항공사, 선박회사, 해외공급자, 농림축산검역 업체 등 무역 관련 업체 검색/조회 통합 도구",
     {
       action: z.enum(ACTIONS).describe(
-        "search_company=업체부호검색 | search_broker=관세사검색 | customs_agency=통관업체 | logistics_company=화물운송업체 | express_company=특송업체 | inspection_target=검사대상 | resident_customs=상주세관검색 | certified_exporter=인증수출자 | specialized_customs=전문관세사 | express_clearance=특송통관 | penalty=관세벌칙",
+        "search_company=통관업체검색(query필수) | search_broker=관세사검색(query필수) | search_animal_plant_company=농림축산업체검색(company_name필수) | forwarder_list=포워더목록 | forwarder_detail=포워더내역(forwarder_code필수) | airline_list=항공사목록 | airline_detail=항공사내역(airline_code필수) | overseas_supplier=해외공급자검색(query필수) | broker_detail=관세사내역(lca_code필수) | ship_company_list=선박회사목록 | ship_company_detail=선박회사내역",
       ),
       query: z.string().optional().describe("검색할 업체명/관세사명 (search_company, search_broker)"),
       company_name: z.string().optional().describe("업체명 (search_animal_plant_company, overseas_supplier)"),

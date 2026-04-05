@@ -258,7 +258,7 @@ export function registerShippingLogistics(
     "물류·운송 — 보세구역, 장치장, 보세운송, 입출항보고, 하선신고, 출항허가, 항공입항, 배차정보 등 물류/운송 통합 도구",
     {
       action: z.enum(ACTIONS).describe(
-        "bonded_area=보세구역화물 | bonded_transport=보세운송 | transport_arrival=운송도착 | ship_entry_exit=선박입출항 | unloading_location=하선장소 | cargo_release=반출입 | arrival_manifest=입항적하목록(B/L) | arrival_cargo=입항화물(B/L) | flight_entry_exit=항공기입출항",
+        "bonded_area=보세구역장치기간(cargo_no필수) | shed_info=장치장정보(customs_code필수) | bonded_vehicle=보세운송차량(btco_code필수) | port_entry_exit=입출항보고(imo_no필수) | unloading_declarations=하선신고(cargo_no필수) | sea_departure=해상출항허가(imo_no필수) | air_departure=항공출항허가 | air_arrival_report=항공입항보고 | bonded_transport_info=보세운송배차정보",
       ),
       cargo_no: z.string().optional().describe("화물관리번호 (bonded_area에서 사용)"),
       customs_code: z.string().optional().describe("세관코드 (shed_info, port_entry_exit, unloading_declarations에서 사용)"),

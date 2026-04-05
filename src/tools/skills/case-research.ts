@@ -406,7 +406,7 @@ export function registerCaseResearch(server: McpServer, lawApiOc: string): void 
     "판례·결정례 리서치 — 대법원 판례, 헌재결정례, 법령해석례, 위원회 결정문, 행정심판례를 검색/조회하는 통합 도구",
     {
       action: z.enum(ACTIONS).describe(
-        "search_cases=판례검색 | get_case_detail=판례상세(case_id) | search_constitutional=헌재결정례검색 | get_constitutional_detail=헌재상세(detc_id) | search_interpretations=법령해석례검색 | get_interpretation_detail=해석례상세(expc_id) | search_committee_decisions=위원회결정문검색(committee필수) | get_committee_decision_detail=결정문상세(decc_id) | search_admin_appeals=행정심판례검색 | get_admin_appeal_detail=심판례상세(detc_id)",
+        "search_cases=판례검색 | get_case_detail=판례상세(case_id필수) | search_constitutional=헌재결정례검색 | get_constitutional_detail=헌재상세(detc_id필수) | search_interpretations=법령해석례검색 | get_interpretation_detail=해석례상세(expc_id필수) | search_committee_decisions=위원회결정문검색(committee필수) | get_committee_decision_detail=결정문상세(decision_id필수) | search_admin_appeals=행정심판례검색 | get_admin_appeal_detail=심판례상세(detc_id필수)",
       ),
       query: z.string().optional().describe("검색어"),
       page: z.number().optional().describe("페이지 번호"),
