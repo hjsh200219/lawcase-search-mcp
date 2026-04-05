@@ -58,14 +58,12 @@ function registerRemote(mcpUrl) {
   const config = loadClaudeConfig();
   if (!config.mcpServers) config.mcpServers = {};
 
-  config.mcpServers[SERVER_NAME] = {
-    command: "npx",
-    args: ["-y", "mcp-remote", mcpUrl],
-  };
+  config.mcpServers[SERVER_NAME] = { url: mcpUrl };
 
   saveClaudeConfig(config);
   console.log(`\n  public-data-mcp (리모트) 등록 완료`);
-  console.log(`  URL: ${mcpUrl}\n`);
+  console.log(`  URL: ${mcpUrl}`);
+  console.log(`  방식: 네이티브 Remote MCP (서버 재배포 시 자동 재연결)\n`);
   console.log(`  Claude Desktop을 재시작하세요.\n`);
 }
 

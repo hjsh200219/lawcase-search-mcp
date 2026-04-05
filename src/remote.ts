@@ -20,6 +20,18 @@ app.use(express.json());
 // 세션별 transport 관리
 const sessions = new Map<string, StreamableHTTPServerTransport>();
 
+// Railway 재배포 시 기존 세션 정리 후 종료
+function gracefulShutdown(signal: string) {
+  console.log(`${signal} received — closing ${sessions.size} session(s)`);
+  for (const [id, transport] of sessions) {
+    transport.close().catch(() => {});
+    sessions.delete(id);
+  }
+  process.exit(0);
+}
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
 // Health check
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", server: "public-data", version: "6.0.0" });
@@ -48,10 +60,9 @@ app.post("/mcp", async (req, res) => {
   let transport: StreamableHTTPServerTransport;
 
   if (sessionId && sessions.has(sessionId)) {
-    // 기존 세션
     transport = sessions.get(sessionId)!;
-  } else if (!sessionId) {
-    // 새 세션 (InitializeRequest)
+  } else {
+    // 새 세션 또는 재배포 후 stale 세션 → 새로 생성
     transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
     });
@@ -67,14 +78,9 @@ app.post("/mcp", async (req, res) => {
 
     await transport.handleRequest(req, res, req.body);
 
-    // handleRequest 후 sessionId가 생성되므로 여기서 저장
     if (transport.sessionId) {
       sessions.set(transport.sessionId, transport);
     }
-    return;
-  } else {
-    // 잘못된 세션 ID
-    res.status(404).json({ error: "Session not found" });
     return;
   }
 
