@@ -2,53 +2,46 @@
 
 ## What This Product Does
 
-lawcase-search-mcp makes the entire Korean National Law Information Center (법제처 국가법령정보센터) accessible to AI assistants. It transforms an XML-based government API into structured, LLM-friendly responses via MCP and REST.
+public-data-mcp는 한국 공공데이터 6개 도메인을 AI 어시스턴트에서 사용할 수 있게 하는 MCP 서버입니다. 법제처, DART, 공공데이터포털, 관세청 UNI-PASS, 수출입은행, 농림축산식품부의 XML/JSON API를 **10개 의도 기반 스킬 도구**로 통합하여 LLM 친화적으로 제공합니다 (v6.0.0).
 
 ## Users
 
 | User Type | How They Use It | Transport |
 |-----------|----------------|-----------|
-| Claude Desktop users | Ask legal questions, Claude calls MCP tools | stdio |
-| Claude Mobile/Web users | Same, via Remote MCP | Streamable HTTP |
+| Claude Desktop users | 법률·통관·기업 분석 질문, Claude가 10개 스킬 호출 | stdio |
+| Claude Mobile/Web users | 동일, Remote MCP 경유 | Streamable HTTP |
 | ChatGPT users | GPT Actions with OpenAPI spec | REST |
 | Developers | Direct HTTP API calls | REST |
 
 ## Value Proposition
 
-- **Completeness**: All 21 law.go.kr API targets supported (not just the popular ones)
-- **AI-native**: Responses formatted for LLM context windows (truncation, structured errors)
-- **Dual access**: Same backend serves MCP clients and REST clients
-- **Korean-first**: Error messages and descriptions in Korean for the target market
+- **10 Skills, 107 Actions**: 6개 도메인 API를 의도 기반 10개 스킬로 통합하여 LLM 도구 선택 정확도와 토큰 효율성 극대화
+- **5 MCP Prompts**: 수입통관, 수출통관, 기업분석, 법령리서치, HS코드 워크플로 가이드 제공
+- **AI-native**: 8000자 truncation, 한글 에러 메시지, 구조화된 응답
+- **Dual access**: 동일 백엔드로 MCP 클라이언트와 REST 클라이언트 모두 지원
+- **Korean-first**: 에러 메시지·도구 설명 모두 한글 제공
 
-## Coverage: 21 API Targets
+## Coverage: 6 Domains × 10 Skills
 
-1. Laws (법령) - statutes, presidential decrees, ministerial ordinances
-2. Court Cases (판례) - Supreme Court and lower court precedents
-3. Constitutional Decisions (헌재결정례)
-4. Legal Interpretations (법령해석례)
-5. Administrative Rules (행정규칙)
-6. Local Ordinances (자치법규)
-7. Treaties (조약)
-8. Legal Terms (법령용어)
-9. English Laws (영문법령)
-10. Committee Decisions (위원회 결정문) - 11 committees
-11. Administrative Appeals (행정심판례)
-12. Old-New Law Comparison (신구법비교)
-13. Law System Diagrams (법령 체계도)
-14. Three-Way Comparison (3단비교)
-15. Attached Forms (별표서식)
-16. Law Abbreviations (법령 약칭)
-17. Law Change History (법령 변경이력)
-18. Article Drill-Down (조항호목)
-19. AI Legal Terms (지식베이스 법령용어)
-20. Linked Ordinances (연계 조례)
-21. Admin Rule Old-New Comparison (행정규칙 신구법비교)
+| Skill | Domain | Actions | Key Features |
+|-------|--------|---------|-------------|
+| `legal_research` | 법제처 | 17 | 법령 검색/상세/조문/용어/영문법령 등 |
+| `case_research` | 법제처 | 10 | 판례/헌재결정/법령해석/행정심판 등 |
+| `law_amendment` | 법제처 | 9 | 신구법비교/3단비교/체계도/별표서식 등 |
+| `import_clearance` | UNI-PASS | 20 | 수입통관진행/B/L화물/수입신고/적하목록 등 |
+| `export_clearance` | UNI-PASS | 6 | 수출통관진행/수출신고/환급 |
+| `shipping_logistics` | UNI-PASS | 9 | 화물운송/하선장소/반출입 등 |
+| `tariff_lookup` | UNI-PASS | 9 | HS코드/품목분류/관세율/과세환율 등 |
+| `trade_entity` | UNI-PASS | 11 | 업체부호/통관업체/특송업체/검사대상 등 |
+| `corporate_disclosure` | DART | 7 | 기업 공시/재무제표/사업보고서 |
+| `public_data` | 공공데이터+수출입은행+농림축산식품부 | 9 | 기업정보/의약품/병원/환율/축산물가격 등 |
 
 ## Product Risks
 
 | Risk | Mitigation |
 |------|-----------|
-| Upstream API downtime | 3-retry with exponential backoff |
-| XML schema changes | Fragile; needs defensive parsing (see tech debt TD-010) |
+| Upstream API downtime | 법제처: 3-retry with exponential backoff, DART: 2-retry |
+| XML schema changes | Fragile; needs defensive parsing |
 | Context overflow | 8000 char truncation |
-| Rate limiting by law.go.kr | 1 req/sec throttle |
+| Rate limiting | 법제처 1 req/sec, DART 200ms interval throttle |
+| API key 미설정 | 스킬 내 action별 조건부 에러 메시지 반환 |

@@ -4,16 +4,10 @@
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { ServerConfig } from "./config.js";
 import { registerSkillTools } from "./tools/skills/index.js";
 
-export interface ServerConfig {
-  lawApiOc: string;
-  dartApiKey?: string;
-  data20ServiceKey?: string;
-  unipassApiKeys?: Record<string, string>;
-  eximApiKey?: string;
-  mafraApiKey?: string;
-}
+export type { ServerConfig } from "./config.js";
 
 export function createServer(config: ServerConfig): McpServer {
   const server = new McpServer({

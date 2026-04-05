@@ -62,163 +62,191 @@ function s(val: unknown): string {
 
 const STATUS_MAP: Record<string, string> = { "01": "계속사업자", "02": "휴업자", "03": "폐업자" };
 
+function handleSearchPharmacy(serviceKey: string) {
+  return async (p: PublicDataParams): Promise<SkillResult> => {
+    try {
+      const result = await searchPharmacy(serviceKey, p);
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
+      }
+      const header = `약국 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
+      const lines = result.items.map((ph) =>
+        `• ${s(ph.yadmNm)}\n  주소: ${s(ph.addr)}\n  전화: ${s(ph.telno)}\n  지역: ${[ph.sidoCdNm, ph.sgguCdNm, ph.emdongNm].filter(Boolean).join(" ")}`,
+      );
+      return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
+    } catch (error) {
+      return errorResponse("약국 검색", error);
+    }
+  };
+}
+
+function handleSearchHospital(serviceKey: string) {
+  return async (p: PublicDataParams): Promise<SkillResult> => {
+    try {
+      const result = await searchHospital(serviceKey, p);
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
+      }
+      const header = `병원 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
+      const lines = result.items.map((h) =>
+        `• ${s(h.yadmNm)} (${s(h.clCdNm)})\n  주소: ${s(h.addr)}\n  전화: ${s(h.telno)}\n  진료과목: ${s(h.dgsbjtCdNm)}\n  의사수: ${s(h.drTotCnt)}명`,
+      );
+      return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
+    } catch (error) {
+      return errorResponse("병원 검색", error);
+    }
+  };
+}
+
+function handleSearchAnimalHospital(serviceKey: string) {
+  return async (p: PublicDataParams): Promise<SkillResult> => {
+    try {
+      const result = await searchHospital(serviceKey, p);
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
+      }
+      const header = `동물병원 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
+      const lines = result.items.map((h) =>
+        `• ${s(h.yadmNm)} (${s(h.clCdNm)})\n  주소: ${s(h.addr)}\n  전화: ${s(h.telno)}`,
+      );
+      return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
+    } catch (error) {
+      return errorResponse("동물병원 검색", error);
+    }
+  };
+}
+
+function handleSearchRareMedicine(serviceKey: string) {
+  return async (p: PublicDataParams): Promise<SkillResult> => {
+    try {
+      const result = await searchRareMedicine(serviceKey, p);
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
+      }
+      const header = `희귀의약품 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
+      const lines = result.items.map((m) =>
+        `• ${s(m.PRODT_NAME)}${m.GOODS_NAME ? ` (${s(m.GOODS_NAME)})` : ""}\n  제조사: ${s(m.MANUF_NAME || m.MANUFPLACE_NAME)}\n  대상질환: ${truncate(s(m.TARGET_DISEASE), 200)}\n  지정일: ${s(m.APPOINT_DATE)}`,
+      );
+      return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
+    } catch (error) {
+      return errorResponse("희귀의약품 검색", error);
+    }
+  };
+}
+
+function handleSearchHealthFood(serviceKey: string) {
+  return async (p: PublicDataParams): Promise<SkillResult> => {
+    try {
+      const result = await searchHealthFood(serviceKey, p);
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
+      }
+      const header = `건강기능식품 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
+      const lines = result.items.map((f) =>
+        `• ${s(f.PRDUCT)}\n  업체: ${s(f.ENTRPS)}\n  기능성: ${truncate(s(f.MAIN_FNCTN), 200)}\n  유통기한: ${s(f.DISTB_PD)}\n  섭취방법: ${truncate(s(f.SRV_USE), 150)}`,
+      );
+      return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
+    } catch (error) {
+      return errorResponse("건강식품 검색", error);
+    }
+  };
+}
+
+function handleSearchBioEquivalence(serviceKey: string) {
+  return async (p: PublicDataParams): Promise<SkillResult> => {
+    try {
+      const result = await searchBioEquivalence(serviceKey, p);
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
+      }
+      const header = `생동성인정품목 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
+      const lines = result.items.map((b) =>
+        `• ${s(b.ITEM_NAME)}\n  업체: ${s(b.ENTP_NAME)}\n  성분: ${s(b.INGR_KOR_NAME)}\n  함량: ${s(b.INGR_QTY)}\n  제형: ${s(b.SHAPE_CODE_NAME)}\n  공고일: ${s(b.BIOEQ_PRODT_NOTICE_DATE)}`,
+      );
+      return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
+    } catch (error) {
+      return errorResponse("생동성인정품목 검색", error);
+    }
+  };
+}
+
+function handleSearchMedicinePatent(serviceKey: string) {
+  return async (p: PublicDataParams): Promise<SkillResult> => {
+    try {
+      const result = await searchMedicinePatent(serviceKey, p);
+      if (result.items.length === 0) {
+        return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
+      }
+      const header = `의약품 특허정보 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
+      const lines = result.items.map((pt) =>
+        `• ${s(pt.ITEM_NAME)}${pt.ITEM_ENG_NAME ? ` (${s(pt.ITEM_ENG_NAME)})` : ""}\n  업체: ${s(pt.ENTP_NAME)}\n  성분: ${s(pt.INGR_KOR_NAME)}${pt.INGR_ENG_NAME ? ` / ${s(pt.INGR_ENG_NAME)}` : ""}\n  특허번호: ${s(pt.PATENT_NO)}\n  특허일: ${s(pt.PATENT_DATE)}\n  만료일: ${s(pt.PATENT_EXPIRY_DATE)}\n  제형: ${s(pt.DOSAGE_FORM)}`,
+      );
+      return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
+    } catch (error) {
+      return errorResponse("의약품 특허정보 검색", error);
+    }
+  };
+}
+
+function handleVerifyBusiness(serviceKey: string) {
+  return async (p: PublicDataParams): Promise<SkillResult> => {
+    const err1 = requireParam(p as Record<string, unknown>, "b_no", "verify_business");
+    if (err1) return err1;
+    const err2 = requireParam(p as Record<string, unknown>, "start_dt", "verify_business");
+    if (err2) return err2;
+    const err3 = requireParam(p as Record<string, unknown>, "p_nm", "verify_business");
+    if (err3) return err3;
+    try {
+      const results = await verifyBusiness(serviceKey, [{ b_no: p.b_no!, start_dt: p.start_dt!, p_nm: p.p_nm!, b_nm: p.b_nm }]);
+      if (results.length === 0) {
+        return { content: [{ type: "text", text: "진위확인 결과를 받지 못했습니다." }] };
+      }
+      const r = results[0];
+      return {
+        content: [{
+          type: "text",
+          text: `사업자등록 진위확인 결과\n\n사업자번호: ${r.b_no}\n확인결과: ${r.valid_msg || r.valid}`,
+        }],
+      };
+    } catch (error) {
+      return errorResponse("사업자등록 진위확인", error);
+    }
+  };
+}
+
+function handleCheckBusinessStatus(serviceKey: string) {
+  return async (p: PublicDataParams): Promise<SkillResult> => {
+    const err = requireParam(p as Record<string, unknown>, "b_no", "check_business_status");
+    if (err) return err;
+    try {
+      const numbers = p.b_no!.split(",").map((n) => n.trim()).filter(Boolean);
+      const results = await checkBusinessStatus(serviceKey, numbers);
+      if (results.length === 0) {
+        return { content: [{ type: "text", text: "상태조회 결과를 받지 못했습니다." }] };
+      }
+      const lines = results.map((r) =>
+        `• ${r.b_no}: ${STATUS_MAP[r.b_stt_cd] || r.b_stt || "확인불가"}\n  과세유형: ${s(r.tax_type)}${r.end_dt ? `\n  폐업일: ${r.end_dt}` : ""}`,
+      );
+      return {
+        content: [{ type: "text", text: `사업자등록 상태조회 결과\n\n${lines.join("\n\n")}` }],
+      };
+    } catch (error) {
+      return errorResponse("사업자등록 상태조회", error);
+    }
+  };
+}
+
 export function createPublicDataHandler(serviceKey: string) {
   return createDispatcher<PublicDataParams>("public_data", {
-    search_pharmacy: async (p) => {
-      try {
-        const result = await searchPharmacy(serviceKey, p);
-        if (result.items.length === 0) {
-          return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
-        }
-        const header = `약국 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
-        const lines = result.items.map((ph) =>
-          `• ${s(ph.yadmNm)}\n  주소: ${s(ph.addr)}\n  전화: ${s(ph.telno)}\n  지역: ${[ph.sidoCdNm, ph.sgguCdNm, ph.emdongNm].filter(Boolean).join(" ")}`,
-        );
-        return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
-      } catch (error) {
-        return errorResponse("약국 검색", error);
-      }
-    },
-
-    search_hospital: async (p) => {
-      try {
-        const result = await searchHospital(serviceKey, p);
-        if (result.items.length === 0) {
-          return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
-        }
-        const header = `병원 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
-        const lines = result.items.map((h) =>
-          `• ${s(h.yadmNm)} (${s(h.clCdNm)})\n  주소: ${s(h.addr)}\n  전화: ${s(h.telno)}\n  진료과목: ${s(h.dgsbjtCdNm)}\n  의사수: ${s(h.drTotCnt)}명`,
-        );
-        return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
-      } catch (error) {
-        return errorResponse("병원 검색", error);
-      }
-    },
-
-    search_animal_hospital: async (p) => {
-      try {
-        const result = await searchHospital(serviceKey, p);
-        if (result.items.length === 0) {
-          return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
-        }
-        const header = `동물병원 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
-        const lines = result.items.map((h) =>
-          `• ${s(h.yadmNm)} (${s(h.clCdNm)})\n  주소: ${s(h.addr)}\n  전화: ${s(h.telno)}`,
-        );
-        return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
-      } catch (error) {
-        return errorResponse("동물병원 검색", error);
-      }
-    },
-
-    search_rare_medicine: async (p) => {
-      try {
-        const result = await searchRareMedicine(serviceKey, p);
-        if (result.items.length === 0) {
-          return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
-        }
-        const header = `희귀의약품 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
-        const lines = result.items.map((m) =>
-          `• ${s(m.PRODT_NAME)}${m.GOODS_NAME ? ` (${s(m.GOODS_NAME)})` : ""}\n  제조사: ${s(m.MANUF_NAME || m.MANUFPLACE_NAME)}\n  대상질환: ${truncate(s(m.TARGET_DISEASE), 200)}\n  지정일: ${s(m.APPOINT_DATE)}`,
-        );
-        return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
-      } catch (error) {
-        return errorResponse("희귀의약품 검색", error);
-      }
-    },
-
-    search_health_food: async (p) => {
-      try {
-        const result = await searchHealthFood(serviceKey, p);
-        if (result.items.length === 0) {
-          return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
-        }
-        const header = `건강기능식품 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
-        const lines = result.items.map((f) =>
-          `• ${s(f.PRDUCT)}\n  업체: ${s(f.ENTRPS)}\n  기능성: ${truncate(s(f.MAIN_FNCTN), 200)}\n  유통기한: ${s(f.DISTB_PD)}\n  섭취방법: ${truncate(s(f.SRV_USE), 150)}`,
-        );
-        return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
-      } catch (error) {
-        return errorResponse("건강식품 검색", error);
-      }
-    },
-
-    search_bio_equivalence: async (p) => {
-      try {
-        const result = await searchBioEquivalence(serviceKey, p);
-        if (result.items.length === 0) {
-          return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
-        }
-        const header = `생동성인정품목 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
-        const lines = result.items.map((b) =>
-          `• ${s(b.ITEM_NAME)}\n  업체: ${s(b.ENTP_NAME)}\n  성분: ${s(b.INGR_KOR_NAME)}\n  함량: ${s(b.INGR_QTY)}\n  제형: ${s(b.SHAPE_CODE_NAME)}\n  공고일: ${s(b.BIOEQ_PRODT_NOTICE_DATE)}`,
-        );
-        return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
-      } catch (error) {
-        return errorResponse("생동성인정품목 검색", error);
-      }
-    },
-
-    search_medicine_patent: async (p) => {
-      try {
-        const result = await searchMedicinePatent(serviceKey, p);
-        if (result.items.length === 0) {
-          return { content: [{ type: "text", text: "검색 결과가 없습니다." }] };
-        }
-        const header = `의약품 특허정보 검색결과 — 총 ${result.totalCount}건 (${result.pageNo}페이지)\n`;
-        const lines = result.items.map((pt) =>
-          `• ${s(pt.ITEM_NAME)}${pt.ITEM_ENG_NAME ? ` (${s(pt.ITEM_ENG_NAME)})` : ""}\n  업체: ${s(pt.ENTP_NAME)}\n  성분: ${s(pt.INGR_KOR_NAME)}${pt.INGR_ENG_NAME ? ` / ${s(pt.INGR_ENG_NAME)}` : ""}\n  특허번호: ${s(pt.PATENT_NO)}\n  특허일: ${s(pt.PATENT_DATE)}\n  만료일: ${s(pt.PATENT_EXPIRY_DATE)}\n  제형: ${s(pt.DOSAGE_FORM)}`,
-        );
-        return { content: [{ type: "text", text: truncate(header + "\n" + lines.join("\n\n")) }] };
-      } catch (error) {
-        return errorResponse("의약품 특허정보 검색", error);
-      }
-    },
-
-    verify_business: async (p) => {
-      const err1 = requireParam(p as Record<string, unknown>, "b_no", "verify_business");
-      if (err1) return err1;
-      const err2 = requireParam(p as Record<string, unknown>, "start_dt", "verify_business");
-      if (err2) return err2;
-      const err3 = requireParam(p as Record<string, unknown>, "p_nm", "verify_business");
-      if (err3) return err3;
-      try {
-        const results = await verifyBusiness(serviceKey, [{ b_no: p.b_no!, start_dt: p.start_dt!, p_nm: p.p_nm!, b_nm: p.b_nm }]);
-        if (results.length === 0) {
-          return { content: [{ type: "text", text: "진위확인 결과를 받지 못했습니다." }] };
-        }
-        const r = results[0];
-        return {
-          content: [{
-            type: "text",
-            text: `사업자등록 진위확인 결과\n\n사업자번호: ${r.b_no}\n확인결과: ${r.valid_msg || r.valid}`,
-          }],
-        };
-      } catch (error) {
-        return errorResponse("사업자등록 진위확인", error);
-      }
-    },
-
-    check_business_status: async (p) => {
-      const err = requireParam(p as Record<string, unknown>, "b_no", "check_business_status");
-      if (err) return err;
-      try {
-        const numbers = p.b_no!.split(",").map((n) => n.trim()).filter(Boolean);
-        const results = await checkBusinessStatus(serviceKey, numbers);
-        if (results.length === 0) {
-          return { content: [{ type: "text", text: "상태조회 결과를 받지 못했습니다." }] };
-        }
-        const lines = results.map((r) =>
-          `• ${r.b_no}: ${STATUS_MAP[r.b_stt_cd] || r.b_stt || "확인불가"}\n  과세유형: ${s(r.tax_type)}${r.end_dt ? `\n  폐업일: ${r.end_dt}` : ""}`,
-        );
-        return {
-          content: [{ type: "text", text: `사업자등록 상태조회 결과\n\n${lines.join("\n\n")}` }],
-        };
-      } catch (error) {
-        return errorResponse("사업자등록 상태조회", error);
-      }
-    },
+    search_pharmacy: handleSearchPharmacy(serviceKey),
+    search_hospital: handleSearchHospital(serviceKey),
+    search_animal_hospital: handleSearchAnimalHospital(serviceKey),
+    search_rare_medicine: handleSearchRareMedicine(serviceKey),
+    search_health_food: handleSearchHealthFood(serviceKey),
+    search_bio_equivalence: handleSearchBioEquivalence(serviceKey),
+    search_medicine_patent: handleSearchMedicinePatent(serviceKey),
+    verify_business: handleVerifyBusiness(serviceKey),
+    check_business_status: handleCheckBusinessStatus(serviceKey),
   });
 }
 
@@ -232,7 +260,9 @@ export function registerPublicData(
     "public_data",
     "공공데이터 — 약국, 병원, 동물병원, 희귀의약품, 건강식품, 생동성인정품목, 의약품 특허, 사업자등록 진위확인/상태조회 통합 도구",
     {
-      action: z.enum(ACTIONS).describe("수행할 조회 유형"),
+      action: z.enum(ACTIONS).describe(
+        "search_company=기업정보검색(company_name필수) | search_pharmacy=약국검색(Q0/Q1) | search_medicine=의약품검색(item_name) | search_hospital=병원검색(Q0/Q1) | search_food_safety=식품안전검색(prdlst_nm) | search_pension=국민연금검색(wkpl_nm) | search_medical_device=의료기기검색(item_name) | search_livestock_price=축산물가격검색(ENTRP_NM) | exchange_rate=수출입은행환율(search_date필수)",
+      ),
       Q0: z.string().optional().describe("시도명 (search_pharmacy)"),
       Q1: z.string().optional().describe("시군구명 (search_pharmacy)"),
       QN: z.string().optional().describe("약국명 (search_pharmacy)"),

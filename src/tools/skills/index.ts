@@ -3,7 +3,7 @@
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { ServerConfig } from "../../server.js";
+import type { ServerConfig } from "../../config.js";
 import { registerLegalResearch } from "./legal-research.js";
 import { registerCaseResearch } from "./case-research.js";
 import { registerLawAmendment } from "./law-amendment.js";

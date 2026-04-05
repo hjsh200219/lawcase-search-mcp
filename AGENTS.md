@@ -42,7 +42,7 @@ src/
   exim-types.ts       # 수출입은행 TypeScript interfaces (27 lines)
   mafra-api.ts        # 농림축산식품부 API client (103 lines)
   mafra-types.ts      # 농림축산식품부 TypeScript interfaces (38 lines)
-  routes/             # 도메인별 REST 라우트 (6 files, 890 lines)
+  routes/             # 도메인별 REST 라우트 (7 files, 890 lines)
   openapi/            # 도메인별 OpenAPI path 생성기 (7 files, 1279 lines)
   tools/
     skills/           # ★ 10개 의도 기반 스킬 도구 + MCP Prompts (v6)
@@ -59,13 +59,7 @@ src/
       trade-entity.ts        # 무역업체 (11 actions)
       corporate-disclosure.ts # 기업공시 (7 actions, DART + 배당)
       public-data.ts         # 공공데이터포털 (9 actions)
-    law-tools.ts      # [deprecated] 개별 법제처 도구
-    dart-tools.ts     # [deprecated] 개별 DART 도구
-    data20-tools.ts   # [deprecated] 개별 공공데이터 도구
-    unipass-tools.ts  # [deprecated] 개별 UNI-PASS 도구
-    unipass/          # [deprecated] 개별 UNI-PASS 하위 도구
-    exim-tools.ts     # [deprecated] 개별 수출입은행 도구
-    mafra-tools.ts    # [deprecated] 개별 농림축산식품부 도구
+    # 기존 개별 도구 파일 (law-tools, dart-tools 등)은 v6에서 삭제됨
 ```
 
 ## Layer Rules

@@ -50,172 +50,200 @@ type ShippingParams = {
   end_date?: string;
 };
 
+function handleBondedArea(apiKeys: Record<string, string>) {
+  return async (p: ShippingParams): Promise<SkillResult> => {
+    const err = requireParam(p as Record<string, unknown>, "cargo_no", "bonded_area");
+    if (err) return err;
+    try {
+      const items = await getBondedAreaStorage(apiKeys, p.cargo_no!);
+      if (items.length === 0) {
+        return { content: [{ type: "text", text: "보세구역 장치기간 결과가 없습니다." }] };
+      }
+      const lines = items.map(
+        (i) => `- 화물번호: ${i.cargMtNo} | 보세구역: ${i.bndAreaNm} | 장치기간: ${i.strgBgnDt} ~ ${i.strgPridExpnDt}`,
+      );
+      return { content: [{ type: "text", text: truncate(`## 보세구역 장치기간 (${p.cargo_no})\n\n${lines.join("\n")}`) }] };
+    } catch (error) {
+      return errorResponse("보세구역 장치기간 조회", error);
+    }
+  };
+}
+
+function handleShedInfo(apiKeys: Record<string, string>) {
+  return async (p: ShippingParams): Promise<SkillResult> => {
+    try {
+      const items = await getShedInfo(apiKeys, { jrsdCstmCd: p.customs_code, snarSgn: p.shed_code });
+      if (items.length === 0) {
+        return { content: [{ type: "text", text: "장치장 정보 결과가 없습니다." }] };
+      }
+      const lines = items.map(
+        (i) => `- ${i.snarSgn}: ${i.snarNm} | ${i.snarAddr}`,
+      );
+      return { content: [{ type: "text", text: truncate(`## 장치장 정보\n\n${lines.join("\n")}`) }] };
+    } catch (error) {
+      return errorResponse("장치장 정보 조회", error);
+    }
+  };
+}
+
+function handleBondedVehicle(apiKeys: Record<string, string>) {
+  return async (p: ShippingParams): Promise<SkillResult> => {
+    try {
+      const items = await getBondedTransportVehicle(apiKeys, { btcoSgn: p.btco_code, vhclNoSanm: p.vehicle_no });
+      if (items.length === 0) {
+        return { content: [{ type: "text", text: "보세운송차량 결과가 없습니다." }] };
+      }
+      const lines = items.map(
+        (i) => `- ${i.vhclNoSanm} (${i.btcoSgn}) | ${i.bnbnTrnpEqipTpcdNm} | 사용: ${i.useYn}`,
+      );
+      return { content: [{ type: "text", text: truncate(`## 보세운송차량\n\n${lines.join("\n")}`) }] };
+    } catch (error) {
+      return errorResponse("보세운송차량 조회", error);
+    }
+  };
+}
+
+function handlePortEntryExit(apiKeys: Record<string, string>) {
+  return async (p: ShippingParams): Promise<SkillResult> => {
+    const err = requireParam(p as Record<string, unknown>, "imo_no", "port_entry_exit")
+      ?? requireParam(p as Record<string, unknown>, "io_type", "port_entry_exit");
+    if (err) return err;
+    try {
+      const items = await getPortEntryExit(apiKeys, {
+        shipCallImoNo: p.imo_no!,
+        seaFlghIoprTpcd: p.io_type!,
+        cstmSgn: p.customs_code,
+      });
+      if (items.length === 0) {
+        return { content: [{ type: "text", text: "입출항보고 결과가 없습니다." }] };
+      }
+      const lines = items.map(
+        (i) => `- ${i.shipFlgtNm} | ${i.cstmNm} | 입항: ${i.etprDttm}`,
+      );
+      return { content: [{ type: "text", text: truncate(`## 입출항보고내역 (IMO: ${p.imo_no})\n\n${lines.join("\n")}`) }] };
+    } catch (error) {
+      return errorResponse("입출항보고 조회", error);
+    }
+  };
+}
+
+function handleUnloadingDeclarations(apiKeys: Record<string, string>) {
+  return async (p: ShippingParams): Promise<SkillResult> => {
+    const err = requireParam(p as Record<string, unknown>, "entry_date", "unloading_declarations")
+      ?? requireParam(p as Record<string, unknown>, "customs_code", "unloading_declarations");
+    if (err) return err;
+    try {
+      const items = await getUnloadingDeclarations(apiKeys, p.entry_date!, p.customs_code!);
+      if (items.length === 0) {
+        return { content: [{ type: "text", text: "하선신고 결과가 없습니다." }] };
+      }
+      const lines = items.map(
+        (i) => `- ${i.mrn}: ${i.shipNm} | ${i.ulvsUnairPrcsNm}`,
+      );
+      return { content: [{ type: "text", text: truncate(`## 하선신고 (${p.entry_date})\n\n${lines.join("\n")}`) }] };
+    } catch (error) {
+      return errorResponse("하선신고 조회", error);
+    }
+  };
+}
+
+function handleSeaDeparture(apiKeys: Record<string, string>) {
+  return async (p: ShippingParams): Promise<SkillResult> => {
+    try {
+      const item = await getSeaDeparturePermit(apiKeys, { ioprSbmtNo: p.submit_no, tkofPermNo: p.permit_no });
+      if (!item) {
+        return { content: [{ type: "text", text: "해상 출항허가 결과가 없습니다." }] };
+      }
+      const text = [
+        "## 해상 출항허가",
+        "",
+        `- 선명: ${item.shipFlgtNm}`,
+        `- 출항일시: ${item.tkofDttm}`,
+        `- 도착항: ${item.arvlCntyPortAirptCd}`,
+        `- 적재중량: ${item.loadWght}`,
+      ].join("\n");
+      return { content: [{ type: "text", text }] };
+    } catch (error) {
+      return errorResponse("해상 출항허가 조회", error);
+    }
+  };
+}
+
+function handleAirDeparture(apiKeys: Record<string, string>) {
+  return async (p: ShippingParams): Promise<SkillResult> => {
+    try {
+      const item = await getAirDeparturePermit(apiKeys, { ioprSbmtNo: p.submit_no, shipFlgtNm: p.flight });
+      if (!item) {
+        return { content: [{ type: "text", text: "항공 출항허가 결과가 없습니다." }] };
+      }
+      const text = [
+        "## 항공 출항허가",
+        "",
+        `- 편명: ${item.shipFlgtNm}`,
+        `- 등록번호: ${item.airRgsrNo}`,
+        `- 출항일시: ${item.tkofDttm}`,
+      ].join("\n");
+      return { content: [{ type: "text", text }] };
+    } catch (error) {
+      return errorResponse("항공 출항허가 조회", error);
+    }
+  };
+}
+
+function handleAirArrivalReport(apiKeys: Record<string, string>) {
+  return async (p: ShippingParams): Promise<SkillResult> => {
+    try {
+      const items = await getAirArrivalReport(apiKeys, { shipFlgtNm: p.flight_name, ioprSbmtNo: p.submit_no });
+      if (items.length === 0) {
+        return { content: [{ type: "text", text: "항공 입항보고 결과가 없습니다." }] };
+      }
+      const lines = items.map(
+        (i) => `- ${i.shipFlgtNm} | 세관: ${i.cstmSgn} | 입항: ${i.etprDttm}`,
+      );
+      return { content: [{ type: "text", text: truncate(`## 항공 입항보고\n\n${lines.join("\n")}`) }] };
+    } catch (error) {
+      return errorResponse("항공 입항보고 조회", error);
+    }
+  };
+}
+
+function handleBondedTransportInfo(apiKeys: Record<string, string>) {
+  return async (p: ShippingParams): Promise<SkillResult> => {
+    const err = requireParam(p as Record<string, unknown>, "start_date", "bonded_transport_info")
+      ?? requireParam(p as Record<string, unknown>, "end_date", "bonded_transport_info");
+    if (err) return err;
+    try {
+      const items = await getBondedTransportInfo(apiKeys, {
+        qryStrtDt: p.start_date!,
+        qryEndDt: p.end_date!,
+        btcoSgn: p.btco_code,
+      });
+      if (items.length === 0) {
+        return { content: [{ type: "text", text: "보세운송 배차정보 결과가 없습니다." }] };
+      }
+      const lines = items.map(
+        (i) => `- ${i.alocPrngDclrNo}: ${i.cntrNo} | ${i.frarSnarSgnNm} → ${i.arlcSnarSgnNm}`,
+      );
+      return { content: [{ type: "text", text: truncate(`## 보세운송 배차정보 (${p.start_date}~${p.end_date})\n\n${lines.join("\n")}`) }] };
+    } catch (error) {
+      return errorResponse("보세운송 배차정보 조회", error);
+    }
+  };
+}
+
 export function createShippingLogisticsHandler(
   apiKeys: Record<string, string>,
 ) {
   return createDispatcher<ShippingParams>("shipping_logistics", {
-    bonded_area: async (p) => {
-      const err = requireParam(p as Record<string, unknown>, "cargo_no", "bonded_area");
-      if (err) return err;
-      try {
-        const items = await getBondedAreaStorage(apiKeys, p.cargo_no!);
-        if (items.length === 0) {
-          return { content: [{ type: "text", text: "보세구역 장치기간 결과가 없습니다." }] };
-        }
-        const lines = items.map(
-          (i) => `- 화물번호: ${i.cargMtNo} | 보세구역: ${i.bndAreaNm} | 장치기간: ${i.strgBgnDt} ~ ${i.strgPridExpnDt}`,
-        );
-        return { content: [{ type: "text", text: truncate(`## 보세구역 장치기간 (${p.cargo_no})\n\n${lines.join("\n")}`) }] };
-      } catch (error) {
-        return errorResponse("보세구역 장치기간 조회", error);
-      }
-    },
-
-    shed_info: async (p) => {
-      try {
-        const items = await getShedInfo(apiKeys, { jrsdCstmCd: p.customs_code, snarSgn: p.shed_code });
-        if (items.length === 0) {
-          return { content: [{ type: "text", text: "장치장 정보 결과가 없습니다." }] };
-        }
-        const lines = items.map(
-          (i) => `- ${i.snarSgn}: ${i.snarNm} | ${i.snarAddr}`,
-        );
-        return { content: [{ type: "text", text: truncate(`## 장치장 정보\n\n${lines.join("\n")}`) }] };
-      } catch (error) {
-        return errorResponse("장치장 정보 조회", error);
-      }
-    },
-
-    bonded_vehicle: async (p) => {
-      try {
-        const items = await getBondedTransportVehicle(apiKeys, { btcoSgn: p.btco_code, vhclNoSanm: p.vehicle_no });
-        if (items.length === 0) {
-          return { content: [{ type: "text", text: "보세운송차량 결과가 없습니다." }] };
-        }
-        const lines = items.map(
-          (i) => `- ${i.vhclNoSanm} (${i.btcoSgn}) | ${i.bnbnTrnpEqipTpcdNm} | 사용: ${i.useYn}`,
-        );
-        return { content: [{ type: "text", text: truncate(`## 보세운송차량\n\n${lines.join("\n")}`) }] };
-      } catch (error) {
-        return errorResponse("보세운송차량 조회", error);
-      }
-    },
-
-    port_entry_exit: async (p) => {
-      const err = requireParam(p as Record<string, unknown>, "imo_no", "port_entry_exit")
-        ?? requireParam(p as Record<string, unknown>, "io_type", "port_entry_exit");
-      if (err) return err;
-      try {
-        const items = await getPortEntryExit(apiKeys, {
-          shipCallImoNo: p.imo_no!,
-          seaFlghIoprTpcd: p.io_type!,
-          cstmSgn: p.customs_code,
-        });
-        if (items.length === 0) {
-          return { content: [{ type: "text", text: "입출항보고 결과가 없습니다." }] };
-        }
-        const lines = items.map(
-          (i) => `- ${i.shipFlgtNm} | ${i.cstmNm} | 입항: ${i.etprDttm}`,
-        );
-        return { content: [{ type: "text", text: truncate(`## 입출항보고내역 (IMO: ${p.imo_no})\n\n${lines.join("\n")}`) }] };
-      } catch (error) {
-        return errorResponse("입출항보고 조회", error);
-      }
-    },
-
-    unloading_declarations: async (p) => {
-      const err = requireParam(p as Record<string, unknown>, "entry_date", "unloading_declarations")
-        ?? requireParam(p as Record<string, unknown>, "customs_code", "unloading_declarations");
-      if (err) return err;
-      try {
-        const items = await getUnloadingDeclarations(apiKeys, p.entry_date!, p.customs_code!);
-        if (items.length === 0) {
-          return { content: [{ type: "text", text: "하선신고 결과가 없습니다." }] };
-        }
-        const lines = items.map(
-          (i) => `- ${i.mrn}: ${i.shipNm} | ${i.ulvsUnairPrcsNm}`,
-        );
-        return { content: [{ type: "text", text: truncate(`## 하선신고 (${p.entry_date})\n\n${lines.join("\n")}`) }] };
-      } catch (error) {
-        return errorResponse("하선신고 조회", error);
-      }
-    },
-
-    sea_departure: async (p) => {
-      try {
-        const item = await getSeaDeparturePermit(apiKeys, { ioprSbmtNo: p.submit_no, tkofPermNo: p.permit_no });
-        if (!item) {
-          return { content: [{ type: "text", text: "해상 출항허가 결과가 없습니다." }] };
-        }
-        const text = [
-          "## 해상 출항허가",
-          "",
-          `- 선명: ${item.shipFlgtNm}`,
-          `- 출항일시: ${item.tkofDttm}`,
-          `- 도착항: ${item.arvlCntyPortAirptCd}`,
-          `- 적재중량: ${item.loadWght}`,
-        ].join("\n");
-        return { content: [{ type: "text", text }] };
-      } catch (error) {
-        return errorResponse("해상 출항허가 조회", error);
-      }
-    },
-
-    air_departure: async (p) => {
-      try {
-        const item = await getAirDeparturePermit(apiKeys, { ioprSbmtNo: p.submit_no, shipFlgtNm: p.flight });
-        if (!item) {
-          return { content: [{ type: "text", text: "항공 출항허가 결과가 없습니다." }] };
-        }
-        const text = [
-          "## 항공 출항허가",
-          "",
-          `- 편명: ${item.shipFlgtNm}`,
-          `- 등록번호: ${item.airRgsrNo}`,
-          `- 출항일시: ${item.tkofDttm}`,
-        ].join("\n");
-        return { content: [{ type: "text", text }] };
-      } catch (error) {
-        return errorResponse("항공 출항허가 조회", error);
-      }
-    },
-
-    air_arrival_report: async (p) => {
-      try {
-        const items = await getAirArrivalReport(apiKeys, { shipFlgtNm: p.flight_name, ioprSbmtNo: p.submit_no });
-        if (items.length === 0) {
-          return { content: [{ type: "text", text: "항공 입항보고 결과가 없습니다." }] };
-        }
-        const lines = items.map(
-          (i) => `- ${i.shipFlgtNm} | 세관: ${i.cstmSgn} | 입항: ${i.etprDttm}`,
-        );
-        return { content: [{ type: "text", text: truncate(`## 항공 입항보고\n\n${lines.join("\n")}`) }] };
-      } catch (error) {
-        return errorResponse("항공 입항보고 조회", error);
-      }
-    },
-
-    bonded_transport_info: async (p) => {
-      const err = requireParam(p as Record<string, unknown>, "start_date", "bonded_transport_info")
-        ?? requireParam(p as Record<string, unknown>, "end_date", "bonded_transport_info");
-      if (err) return err;
-      try {
-        const items = await getBondedTransportInfo(apiKeys, {
-          qryStrtDt: p.start_date!,
-          qryEndDt: p.end_date!,
-          btcoSgn: p.btco_code,
-        });
-        if (items.length === 0) {
-          return { content: [{ type: "text", text: "보세운송 배차정보 결과가 없습니다." }] };
-        }
-        const lines = items.map(
-          (i) => `- ${i.alocPrngDclrNo}: ${i.cntrNo} | ${i.frarSnarSgnNm} → ${i.arlcSnarSgnNm}`,
-        );
-        return { content: [{ type: "text", text: truncate(`## 보세운송 배차정보 (${p.start_date}~${p.end_date})\n\n${lines.join("\n")}`) }] };
-      } catch (error) {
-        return errorResponse("보세운송 배차정보 조회", error);
-      }
-    },
+    bonded_area: handleBondedArea(apiKeys),
+    shed_info: handleShedInfo(apiKeys),
+    bonded_vehicle: handleBondedVehicle(apiKeys),
+    port_entry_exit: handlePortEntryExit(apiKeys),
+    unloading_declarations: handleUnloadingDeclarations(apiKeys),
+    sea_departure: handleSeaDeparture(apiKeys),
+    air_departure: handleAirDeparture(apiKeys),
+    air_arrival_report: handleAirArrivalReport(apiKeys),
+    bonded_transport_info: handleBondedTransportInfo(apiKeys),
   });
 }
 
@@ -229,7 +257,9 @@ export function registerShippingLogistics(
     "shipping_logistics",
     "물류·운송 — 보세구역, 장치장, 보세운송, 입출항보고, 하선신고, 출항허가, 항공입항, 배차정보 등 물류/운송 통합 도구",
     {
-      action: z.enum(ACTIONS).describe("수행할 조회 유형"),
+      action: z.enum(ACTIONS).describe(
+        "bonded_area=보세구역화물 | bonded_transport=보세운송 | transport_arrival=운송도착 | ship_entry_exit=선박입출항 | unloading_location=하선장소 | cargo_release=반출입 | arrival_manifest=입항적하목록(B/L) | arrival_cargo=입항화물(B/L) | flight_entry_exit=항공기입출항",
+      ),
       cargo_no: z.string().optional().describe("화물관리번호 (bonded_area에서 사용)"),
       customs_code: z.string().optional().describe("세관코드 (shed_info, port_entry_exit, unloading_declarations에서 사용)"),
       shed_code: z.string().optional().describe("장치장부호 (shed_info에서 사용)"),

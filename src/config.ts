@@ -3,7 +3,14 @@
  * index.ts / remote.ts 진입점에서 공통 사용
  */
 
-import type { ServerConfig } from "./server.js";
+export interface ServerConfig {
+  lawApiOc: string;
+  dartApiKey?: string;
+  data20ServiceKey?: string;
+  unipassApiKeys?: Record<string, string>;
+  eximApiKey?: string;
+  mafraApiKey?: string;
+}
 
 function collectUnipassKeys(): Record<string, string> {
   const keys: Record<string, string> = {};

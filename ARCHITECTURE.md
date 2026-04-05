@@ -2,7 +2,7 @@
 
 ## System Overview
 
-public-data-mcp is a Model Context Protocol (MCP) server providing Korean public data search through multiple APIs: 법제처 국가법령정보센터 (21 targets), DART 전자공시시스템 (5 targets), 공공데이터포털 (8 targets), 관세청 UNI-PASS (52 targets), 수출입은행 환율 (1 target), and 농림축산식품부 (2 targets). Total ~89 tools across law, corporate disclosure, customs, trade, agriculture, and public data domains.
+public-data-mcp is a Model Context Protocol (MCP) server providing Korean public data search through multiple APIs: 법제처 국가법령정보센터, DART 전자공시시스템, 공공데이터포털, 관세청 UNI-PASS, 수출입은행 환율, 농림축산식품부. **10개 의도 기반 스킬 도구** + **5개 MCP Prompts 워크플로 가이드**로 107개 API 액션을 제공 (v6.0.0).
 
 ## High-Level Diagram
 
@@ -30,15 +30,22 @@ public-data-mcp is a Model Context Protocol (MCP) server providing Korean public
 │  orchestrate │ │ REST API │ │ spec gen │
 └──────┬───────┘ └────┬─────┘ └──────────┘
        │              │
-       │  ┌────────────────────────────────────┐
-       │  │  tools/                              │
-       │  │  law-tools.ts       (21 tools)       │
-       │  │  dart-tools.ts      (5 tools)        │
-       │  │  data20-tools.ts    (8 tools)        │
-       │  │  unipass-tools.ts → unipass/ (52)    │
-       │  │  exim-tools.ts      (1 tool)         │
-       │  │  mafra-tools.ts     (2 tools)        │
-       │  └───────────┬────────────────────────┘
+       │  ┌────────────────────────────────────────┐
+       │  │  tools/skills/ (10 Skills + 5 Prompts)  │
+       │  │  index.ts          — 오케스트레이터      │
+       │  │  _shared.ts        — 공통 디스패처       │
+       │  │  prompts.ts        — 워크플로 가이드      │
+       │  │  legal-research    (17 actions)          │
+       │  │  case-research     (10 actions)          │
+       │  │  law-amendment     (9 actions)           │
+       │  │  import-clearance  (20 actions)          │
+       │  │  export-clearance  (6 actions)           │
+       │  │  shipping-logistics(9 actions)           │
+       │  │  tariff-lookup     (9 actions)           │
+       │  │  trade-entity      (11 actions)          │
+       │  │  corporate-disclosure(7 actions)         │
+       │  │  public-data       (9 actions)           │
+       │  └───────────┬────────────────────────────┘
        │              │
        └──────┬───────┘
               ▼
@@ -79,8 +86,8 @@ public-data-mcp is a Model Context Protocol (MCP) server providing Korean public
 | Layer | File(s) | Lines | Responsibility |
 |-------|---------|-------|---------------|
 | **Entrypoint** | `index.ts`, `remote.ts`, `config.ts` | 23 + 115 + 60 | Process bootstrap, transport init, env validation |
-| **Protocol** | `server.ts`, `tools/` (6 domains) | 52 + 3,685 total | MCP tool registration, zod validation, response formatting |
-| **HTTP Adapter** | `api-routes.ts` + `routes/`, `openapi.ts` + `openapi/` | 40+890, 42+1279 | REST routes, OpenAPI 3.1 spec |
+| **Protocol** | `server.ts`, `tools/skills/` (10 skills + prompts) | 27 + 5,897 total | MCP 스킬 도구 등록, action 디스패치, zod validation |
+| **HTTP Adapter** | `api-routes.ts` + `routes/` (7 files), `openapi.ts` + `openapi/` | 40+890, 42+1279 | REST routes, OpenAPI 3.1 spec |
 | **Data Access** | `law-api.ts`, `dart-api.ts`, `data20-api.ts`, `unipass-api.ts`, `exim-api.ts`, `mafra-api.ts` | 1549 + 375 + 355 + 1501 + 82 + 103 | API clients: fetch, parse, rate-limit, retry |
 | **Shared** | `shared.ts`, `http-client.ts` | 18 + 125 | Cross-cutting utilities, shared HTTP client |
 | **Types** | `law-types.ts`, `dart-types.ts`, `data20-types.ts`, `unipass-types.ts`, `exim-types.ts`, `mafra-types.ts` | 598 + 153 + 143 + 574 + 27 + 38 | TypeScript interfaces per domain |
@@ -123,7 +130,9 @@ Dev dependencies: `typescript`, `tsx`, `@types/node`, `@types/express`, `vitest`
 | `exim-api.test.ts` | 7 | 수출입은행 전수 |
 | `mafra-api.test.ts` | 8 | 농림축산식품부 전수 |
 | `http-client.test.ts` | 12 | HTTP client 전수 |
-| **합계** | **142** | — |
+| `tools/skills/_shared.test.ts` | 9 | 디스패처/파라미터 검증 |
+| `tools/skills/*.test.ts` (10개) | 140 | 10개 스킬 도구 action별 테스트 |
+| **합계** | **291** | — |
 
 ## Key Patterns
 
