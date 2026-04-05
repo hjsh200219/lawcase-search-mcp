@@ -6,10 +6,10 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/remote.js",
-    "start:stdio": "node dist/index.js",
-    "dev": "tsx src/index.ts",
-    "dev:remote": "tsx src/remote.ts",
+    "start": "node --use-system-ca dist/remote.js",
+    "start:stdio": "node --use-system-ca dist/index.js",
+    "dev": "tsx --node-options='--use-system-ca' src/index.ts",
+    "dev:remote": "tsx --node-options='--use-system-ca' src/remote.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
