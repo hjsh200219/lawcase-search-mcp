@@ -67,6 +67,12 @@ export interface CustomsExchangeRateItem {
   imexTp: string;
 }
 
+export interface CustomsExchangeRateResult {
+  rates: CustomsExchangeRateItem[];
+  queriedDate: string;
+  isFallback: boolean;
+}
+
 // --- API010: 통관고유부호 업체 조회 ---
 
 export interface CompanyItem {

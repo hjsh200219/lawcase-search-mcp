@@ -88,17 +88,36 @@ describe("tariff_lookup 스킬", () => {
   // -- customs_rate --
 
   it("customs_rate_유효한결과_포맷팅반환", async () => {
-    vi.mocked(getCustomsExchangeRates).mockResolvedValue([
-      { currSgn: "USD", mtryUtNm: "미국 달러", fxrt: "1350.00", aplyBgnDt: "20260101" },
-    ] as any);
+    vi.mocked(getCustomsExchangeRates).mockResolvedValue({
+      rates: [{ currSgn: "USD", mtryUtNm: "미국 달러", fxrt: "1350.00", aplyBgnDt: "20260101", cntySgn: "US", imexTp: "1" }],
+      queriedDate: "20260403",
+      isFallback: false,
+    } as any);
 
     const result = await handler({ action: "customs_rate" });
     expect(result.content[0].text).toContain("USD");
+    expect(result.content[0].text).toContain("2026-04-03");
     expect(getCustomsExchangeRates).toHaveBeenCalledWith(MOCK_KEYS, undefined);
   });
 
+  it("customs_rate_폴백시_안내메시지포함", async () => {
+    vi.mocked(getCustomsExchangeRates).mockResolvedValue({
+      rates: [{ currSgn: "USD", mtryUtNm: "미국 달러", fxrt: "1350.00", aplyBgnDt: "20260327", cntySgn: "US", imexTp: "1" }],
+      queriedDate: "20260327",
+      isFallback: true,
+    } as any);
+
+    const result = await handler({ action: "customs_rate" });
+    expect(result.content[0].text).toContain("데이터 없음");
+    expect(result.content[0].text).toContain("2026-03-27");
+  });
+
   it("customs_rate_통화지정_전달", async () => {
-    vi.mocked(getCustomsExchangeRates).mockResolvedValue([]);
+    vi.mocked(getCustomsExchangeRates).mockResolvedValue({
+      rates: [],
+      queriedDate: "20260403",
+      isFallback: false,
+    } as any);
 
     await handler({ action: "customs_rate", currencies: ["USD", "EUR"] });
     expect(getCustomsExchangeRates).toHaveBeenCalledWith(MOCK_KEYS, ["USD", "EUR"]);
@@ -174,13 +193,28 @@ describe("tariff_lookup 스킬", () => {
   // -- market_exchange --
 
   it("market_exchange_유효한결과", async () => {
-    vi.mocked(getMarketExchangeRates).mockResolvedValue([
-      { currency: "USD", currencyName: "미국 달러", dealBaseRate: 1350, ttBuy: "1348", ttSell: "1352", baseRate: "1350" },
-    ] as any);
+    vi.mocked(getMarketExchangeRates).mockResolvedValue({
+      rates: [{ currency: "USD", currencyName: "미국 달러", dealBaseRate: 1350, ttBuy: "1348", ttSell: "1352", baseRate: "1350" }],
+      queriedDate: "20260403",
+      isFallback: false,
+    } as any);
 
     const result = await handler({ action: "market_exchange" });
     expect(result.content[0].text).toContain("시장 환율");
+    expect(result.content[0].text).toContain("2026-04-03");
     expect(getMarketExchangeRates).toHaveBeenCalledWith("exim-test-key", undefined);
+  });
+
+  it("market_exchange_폴백시_안내메시지포함", async () => {
+    vi.mocked(getMarketExchangeRates).mockResolvedValue({
+      rates: [{ currency: "USD", currencyName: "미국 달러", dealBaseRate: 1350, ttBuy: "1348", ttSell: "1352", baseRate: "1350" }],
+      queriedDate: "20260403",
+      isFallback: true,
+    } as any);
+
+    const result = await handler({ action: "market_exchange" });
+    expect(result.content[0].text).toContain("비영업일");
+    expect(result.content[0].text).toContain("2026-04-03");
   });
 
   it("market_exchange_eximApiKey없으면_안내", async () => {

@@ -33,6 +33,28 @@ export function createDispatcher<T extends { action: string }>(
 }
 
 /**
+ * 빈 결과 시 AI가 다음 행동을 결정할 수 있는 힌트 포함 메시지 생성.
+ * 일시 장애와 진짜 무결과를 구분하는 단서 제공.
+ */
+export function emptyResultMessage(
+  domain: string,
+  usedParams?: Record<string, string | undefined>,
+  hint?: string,
+): SkillResult {
+  const paramLines = usedParams
+    ? Object.entries(usedParams)
+        .filter(([, v]) => v !== undefined && v !== "")
+        .map(([k, v]) => `  - ${k}: ${v}`)
+        .join("\n")
+    : "";
+  const paramSection = paramLines ? `\n\n사용된 조건:\n${paramLines}` : "";
+  const hintSection = hint ? `\n\n${hint}` : "";
+  return {
+    content: [{ type: "text", text: `${domain} 검색 결과가 없습니다.${paramSection}${hintSection}` }],
+  };
+}
+
+/**
  * 필수 파라미터 누락 시 에러 메시지 반환 헬퍼.
  * 예: requireParam(params, "hs_code", "search_hs")
  */

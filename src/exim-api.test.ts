@@ -61,35 +61,59 @@ describe("parseExchangeRateResponse", () => {
 
 // --- getMarketExchangeRates (fetch mock) ---
 
-describe("getMarketExchangeRates", () => {
-  it("getMarketExchangeRates_정상응답_환율반환", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () =>
-          Promise.resolve([
-            {
-              result: 1,
-              cur_unit: "USD",
-              deal_bas_r: "1,362",
-              cur_nm: "미국 달러",
-              ttb: "1,348.5",
-              tts: "1,375.5",
-              bkpr: "1,362",
-              yy_efee_r: "0",
-              ten_dd_efee_r: "0",
-              kftc_bkpr: "1,362",
-              kftc_deal_bas_r: "1,362",
-            },
-          ]),
-      })
-    );
+function mockFetchOk(data: unknown[]) {
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve(data),
+  });
+}
 
-    const result = await getMarketExchangeRates("testkey");
-    expect(result).toHaveLength(1);
-    expect(result[0].currency).toBe("USD");
+const USD_RAW = {
+  result: 1, cur_unit: "USD", deal_bas_r: "1,362", cur_nm: "미국 달러",
+  ttb: "1,348.5", tts: "1,375.5", bkpr: "1,362",
+  yy_efee_r: "0", ten_dd_efee_r: "0", kftc_bkpr: "1,362", kftc_deal_bas_r: "1,362",
+};
+
+describe("getMarketExchangeRates", () => {
+  it("getMarketExchangeRates_평일정상응답_환율반환", async () => {
+    vi.stubGlobal("fetch", mockFetchOk([USD_RAW]));
+
+    const result = await getMarketExchangeRates("testkey", "20260403");
+    expect(result.rates).toHaveLength(1);
+    expect(result.rates[0].currency).toBe("USD");
+    expect(result.queriedDate).toBe("20260403");
+    expect(result.isFallback).toBe(false);
+  });
+
+  it("getMarketExchangeRates_주말요청_평일자동폴백", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve([USD_RAW]) });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getMarketExchangeRates("testkey", "20260405");
+    expect(result.rates).toHaveLength(1);
+    expect(result.queriedDate).toBe("20260403");
+    expect(result.isFallback).toBe(true);
+  });
+
+  it("getMarketExchangeRates_빈응답_이전영업일자동폴백", async () => {
+    let callCount = 0;
+    const fetchMock = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount <= 1) {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([USD_RAW]) });
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getMarketExchangeRates("testkey", "20260403");
+    expect(result.rates).toHaveLength(1);
+    expect(result.isFallback).toBe(true);
+    expect(result.queriedDate).toBe("20260402");
   });
 
   it("getMarketExchangeRates_302리다이렉트_쿠키포함재요청", async () => {
@@ -99,29 +123,37 @@ describe("getMarketExchangeRates", () => {
         status: 302,
         headers: new Map([
           ["set-cookie", "JSESSIONID=abc123; Path=/"],
-          ["location", "/site/program/financial/exchangeJSON?authkey=testkey&searchdate=20260404&data=AP01"],
+          ["location", "/site/program/financial/exchangeJSON?authkey=testkey&searchdate=20260403&data=AP01"],
         ]),
       })
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: () =>
-          Promise.resolve([
-            { result: 1, cur_unit: "EUR", deal_bas_r: "1,500", cur_nm: "유로", ttb: "", tts: "", bkpr: "", yy_efee_r: "", ten_dd_efee_r: "", kftc_bkpr: "", kftc_deal_bas_r: "" },
-          ]),
+        json: () => Promise.resolve([
+          { result: 1, cur_unit: "EUR", deal_bas_r: "1,500", cur_nm: "유로", ttb: "", tts: "", bkpr: "", yy_efee_r: "", ten_dd_efee_r: "", kftc_bkpr: "", kftc_deal_bas_r: "" },
+        ]),
       });
 
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await getMarketExchangeRates("testkey");
-    expect(result).toHaveLength(1);
-    expect(result[0].currency).toBe("EUR");
+    const result = await getMarketExchangeRates("testkey", "20260403");
+    expect(result.rates).toHaveLength(1);
+    expect(result.rates[0].currency).toBe("EUR");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("getMarketExchangeRates_네트워크에러_빈배열반환", async () => {
+  it("getMarketExchangeRates_7일연속빈응답_빈결과반환", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: () => Promise.resolve([]),
+    }));
+
+    const result = await getMarketExchangeRates("testkey", "20260403");
+    expect(result.rates).toEqual([]);
+  });
+
+  it("getMarketExchangeRates_네트워크에러_빈결과반환", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("timeout")));
-    const result = await getMarketExchangeRates("testkey");
-    expect(result).toEqual([]);
+    const result = await getMarketExchangeRates("testkey", "20260403");
+    expect(result.rates).toEqual([]);
   });
 });

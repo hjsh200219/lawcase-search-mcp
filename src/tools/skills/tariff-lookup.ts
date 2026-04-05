@@ -20,7 +20,7 @@ import {
 } from "../../unipass-api.js";
 import { getMarketExchangeRates } from "../../exim-api.js";
 import { errorResponse, truncate } from "../../shared.js";
-import { createDispatcher, requireParam, type SkillResult } from "./_shared.js";
+import { createDispatcher, requireParam, emptyResultMessage, type SkillResult } from "./_shared.js";
 
 const ACTIONS = [
   "search_hs",
@@ -52,7 +52,7 @@ function handleSearchHs(apiKeys: Record<string, string>) {
     try {
       const items = await searchHsCode(apiKeys, p.hs_code!);
       if (items.length === 0) {
-        return { content: [{ type: "text", text: "해당 HS 부호의 검색 결과가 없습니다." }] };
+        return emptyResultMessage("HS코드 검색", { hs_code: p.hs_code }, "HS 부호 자릿수(4~10자리)를 확인하거나, 품목명 키워드로 검색해 보세요.");
       }
       const lines = items.map(
         (i) => `- ${i.hsSgn}: ${i.korePrnm || i.englPrnm} (세율: ${i.txrt}%, 세율유형: ${i.txtpSgn})`,
@@ -71,7 +71,7 @@ function handleTariffRate(apiKeys: Record<string, string>) {
     try {
       const items = await getTariffRate(apiKeys, p.hs_code!);
       if (items.length === 0) {
-        return { content: [{ type: "text", text: "해당 HS 부호의 관세율 정보를 찾을 수 없습니다." }] };
+        return emptyResultMessage("관세율 조회", { hs_code: p.hs_code }, "10자리 HS 부호를 사용하면 더 정확한 결과를 얻을 수 있습니다.");
       }
       const lines = items.map(
         (i) => `- ${i.trrtTpNm} (${i.trrtTpcd}): ${i.trrt}% (적용: ${i.aplyStrtDt}~${i.aplyEndDt})`,
@@ -91,14 +91,21 @@ function handleTariffRate(apiKeys: Record<string, string>) {
 function handleCustomsRate(apiKeys: Record<string, string>) {
   return async (p: TariffParams): Promise<SkillResult> => {
     try {
-      const items = await getCustomsExchangeRates(apiKeys, p.currencies);
-      if (items.length === 0) {
-        return { content: [{ type: "text", text: "관세 환율 정보를 조회할 수 없습니다." }] };
+      const result = await getCustomsExchangeRates(apiKeys, p.currencies);
+      if (result.rates.length === 0) {
+        return {
+          content: [{
+            type: "text",
+            text: "최근 2주 이내 관세 환율 정보를 찾을 수 없습니다. API 키 또는 서비스 상태를 확인해 주세요.",
+          }],
+        };
       }
-      const lines = items.map(
+      const lines = result.rates.map(
         (i) => `- ${i.currSgn} (${i.mtryUtNm}): ${i.fxrt}원 (적용시작: ${i.aplyBgnDt})`,
       );
-      return { content: [{ type: "text", text: `## 관세 환율\n\n${lines.join("\n")}` }] };
+      const dateLabel = `${result.queriedDate.slice(0, 4)}-${result.queriedDate.slice(4, 6)}-${result.queriedDate.slice(6, 8)}`;
+      const fallbackNote = result.isFallback ? ` (요청일 데이터 없음 → ${dateLabel} 기준 자동 조회)` : "";
+      return { content: [{ type: "text", text: `## 관세 환율 (${dateLabel})${fallbackNote}\n\n${lines.join("\n")}` }] };
     } catch (error) {
       return errorResponse("관세환율 조회", error);
     }
@@ -205,22 +212,24 @@ function handleMarketExchange(eximApiKey?: string) {
       };
     }
     try {
-      const items = await getMarketExchangeRates(eximApiKey, p.date);
-      if (items.length === 0) {
+      const result = await getMarketExchangeRates(eximApiKey, p.date);
+      if (result.rates.length === 0) {
         return {
           content: [{
             type: "text",
-            text: "환율 정보를 조회할 수 없습니다. 영업일이 아니거나 11시 이전일 수 있습니다.",
+            text: "최근 7영업일 이내 환율 정보를 찾을 수 없습니다. API 키 또는 서비스 상태를 확인해 주세요.",
           }],
         };
       }
-      const lines = items.map(
+      const lines = result.rates.map(
         (i) =>
           `- **${i.currency}** (${i.currencyName}): 매매기준율 ${i.dealBaseRate.toLocaleString()}원` +
           (i.ttBuy ? ` | 매입 ${i.ttBuy}` : "") +
           (i.ttSell ? ` | 매도 ${i.ttSell}` : ""),
       );
-      const header = p.date ? `## 시장 환율 (${p.date})` : "## 시장 환율 (당일)";
+      const dateLabel = `${result.queriedDate.slice(0, 4)}-${result.queriedDate.slice(4, 6)}-${result.queriedDate.slice(6, 8)}`;
+      const fallbackNote = result.isFallback ? ` (요청일 비영업일 → ${dateLabel} 기준 자동 조회)` : "";
+      const header = `## 시장 환율 (${dateLabel})${fallbackNote}`;
       return { content: [{ type: "text", text: `${header}\n\n${lines.join("\n")}` }] };
     } catch (error) {
       return errorResponse("시장 환율 조회", error);

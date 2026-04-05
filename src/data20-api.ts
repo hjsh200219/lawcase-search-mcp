@@ -4,6 +4,7 @@
  */
 
 import { XMLParser } from "fast-xml-parser";
+import { fetchWithRetry } from "./http-client.js";
 import type {
   DataGoKrResult,
   PharmacyItem,
@@ -19,6 +20,7 @@ import type {
 } from "./data20-types.js";
 
 const REQUEST_TIMEOUT_MS = 15000;
+const MAX_RETRIES = 2;
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -63,37 +65,33 @@ async function fetchXml<T>(
   serviceKey: string,
   params: Record<string, string>,
 ): Promise<DataGoKrResult<T>> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const response = await fetchWithRetry(buildUrl(baseUrl, serviceKey, params), {
+    timeoutMs: REQUEST_TIMEOUT_MS,
+    maxRetries: MAX_RETRIES,
+  });
+  if (!response.ok) throw new Error(`API 오류: HTTP ${response.status}`);
 
-  try {
-    const response = await fetch(buildUrl(baseUrl, serviceKey, params), { signal: controller.signal });
-    if (!response.ok) throw new Error(`API 오류: HTTP ${response.status}`);
-
-    const text = await response.text();
-    const parsed = xmlParser.parse(text) as {
-      response?: {
-        header?: { resultCode?: string | number; resultMsg?: string };
-        body?: Record<string, unknown>;
-      };
+  const text = await response.text();
+  const parsed = xmlParser.parse(text) as {
+    response?: {
+      header?: { resultCode?: string | number; resultMsg?: string };
+      body?: Record<string, unknown>;
     };
+  };
 
-    const header = parsed.response?.header;
-    throwIfErrorCode(String(header?.resultCode ?? "00"), header?.resultMsg);
+  const header = parsed.response?.header;
+  throwIfErrorCode(String(header?.resultCode ?? "00"), header?.resultMsg);
 
-    const body = parsed.response?.body;
-    const rawItems = (body?.items as Record<string, unknown>)?.item;
-    const items = !rawItems ? [] : Array.isArray(rawItems) ? rawItems : [rawItems];
+  const body = parsed.response?.body;
+  const rawItems = (body?.items as Record<string, unknown>)?.item;
+  const items = !rawItems ? [] : Array.isArray(rawItems) ? rawItems : [rawItems];
 
-    return {
-      totalCount: Number(body?.totalCount) || 0,
-      pageNo: Number(body?.pageNo) || 1,
-      numOfRows: Number(body?.numOfRows) || 0,
-      items: items as T[],
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
+  return {
+    totalCount: Number(body?.totalCount) || 0,
+    pageNo: Number(body?.pageNo) || 1,
+    numOfRows: Number(body?.numOfRows) || 0,
+    items: items as T[],
+  };
 }
 
 // --- JSON fetch (주식배당, 의약품, 건강식품) ---
@@ -103,48 +101,44 @@ async function fetchJson<T>(
   serviceKey: string,
   params: Record<string, string>,
 ): Promise<DataGoKrResult<T>> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const response = await fetchWithRetry(buildUrl(baseUrl, serviceKey, params), {
+    timeoutMs: REQUEST_TIMEOUT_MS,
+    maxRetries: MAX_RETRIES,
+  });
+  if (!response.ok) throw new Error(`API 오류: HTTP ${response.status}`);
 
-  try {
-    const response = await fetch(buildUrl(baseUrl, serviceKey, params), { signal: controller.signal });
-    if (!response.ok) throw new Error(`API 오류: HTTP ${response.status}`);
+  const data = await response.json() as Record<string, unknown>;
 
-    const data = await response.json() as Record<string, unknown>;
+  const top = (data.response || data) as Record<string, unknown>;
+  const header = top.header as Record<string, unknown> | undefined;
+  const body = top.body as Record<string, unknown> | undefined;
 
-    const top = (data.response || data) as Record<string, unknown>;
-    const header = top.header as Record<string, unknown> | undefined;
-    const body = top.body as Record<string, unknown> | undefined;
+  throwIfErrorCode(String(header?.resultCode ?? "00"), String(header?.resultMsg ?? ""));
 
-    throwIfErrorCode(String(header?.resultCode ?? "00"), String(header?.resultMsg ?? ""));
-
-    let items: T[];
-    const bodyItems = body?.items as Record<string, unknown> | unknown[] | undefined;
-    if (bodyItems && typeof bodyItems === "object" && !Array.isArray(bodyItems) && (bodyItems as Record<string, unknown>).item) {
-      const raw = (bodyItems as Record<string, unknown>).item;
-      items = Array.isArray(raw) ? raw as T[] : [raw as T];
-    } else if (Array.isArray(bodyItems)) {
-      items = bodyItems as T[];
-    } else {
-      items = [];
-    }
-
-    items = items.map((i) => {
-      if (typeof i === "object" && i !== null && "item" in (i as Record<string, unknown>)) {
-        return (i as Record<string, unknown>).item as T;
-      }
-      return i;
-    });
-
-    return {
-      totalCount: Number(body?.totalCount) || 0,
-      pageNo: Number(body?.pageNo) || 1,
-      numOfRows: Number(body?.numOfRows) || 0,
-      items,
-    };
-  } finally {
-    clearTimeout(timeout);
+  let items: T[];
+  const bodyItems = body?.items as Record<string, unknown> | unknown[] | undefined;
+  if (bodyItems && typeof bodyItems === "object" && !Array.isArray(bodyItems) && (bodyItems as Record<string, unknown>).item) {
+    const raw = (bodyItems as Record<string, unknown>).item;
+    items = Array.isArray(raw) ? raw as T[] : [raw as T];
+  } else if (Array.isArray(bodyItems)) {
+    items = bodyItems as T[];
+  } else {
+    items = [];
   }
+
+  items = items.map((i) => {
+    if (typeof i === "object" && i !== null && "item" in (i as Record<string, unknown>)) {
+      return (i as Record<string, unknown>).item as T;
+    }
+    return i;
+  });
+
+  return {
+    totalCount: Number(body?.totalCount) || 0,
+    pageNo: Number(body?.pageNo) || 1,
+    numOfRows: Number(body?.numOfRows) || 0,
+    items,
+  };
 }
 
 // --- 약국 검색 ---
@@ -303,26 +297,22 @@ export async function verifyBusiness(
   businesses: BusinessValidateRequest[],
 ): Promise<BusinessValidateResult[]> {
   const url = `https://api.odcloud.kr/api/nts-businessman/v1/validate?serviceKey=${encodeURIComponent(serviceKey)}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
+    timeoutMs: REQUEST_TIMEOUT_MS,
+    maxRetries: MAX_RETRIES,
+    init: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ businesses }),
-      signal: controller.signal,
-    });
-    if (!response.ok) throw new Error(`API 오류: HTTP ${response.status}`);
+    },
+  });
+  if (!response.ok) throw new Error(`API 오류: HTTP ${response.status}`);
 
-    const data = await response.json() as { data?: BusinessValidateResult[]; status_code?: string };
-    if (data.status_code && data.status_code !== "OK") {
-      throw new Error(`사업자등록 진위확인 오류: ${data.status_code}`);
-    }
-    return data.data || [];
-  } finally {
-    clearTimeout(timeout);
+  const data = await response.json() as { data?: BusinessValidateResult[]; status_code?: string };
+  if (data.status_code && data.status_code !== "OK") {
+    throw new Error(`사업자등록 진위확인 오류: ${data.status_code}`);
   }
+  return data.data || [];
 }
 
 // --- 사업자등록 상태조회 ---
@@ -332,24 +322,20 @@ export async function checkBusinessStatus(
   businessNumbers: string[],
 ): Promise<BusinessStatusResult[]> {
   const url = `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(serviceKey)}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
+    timeoutMs: REQUEST_TIMEOUT_MS,
+    maxRetries: MAX_RETRIES,
+    init: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ b_no: businessNumbers }),
-      signal: controller.signal,
-    });
-    if (!response.ok) throw new Error(`API 오류: HTTP ${response.status}`);
+    },
+  });
+  if (!response.ok) throw new Error(`API 오류: HTTP ${response.status}`);
 
-    const data = await response.json() as { data?: BusinessStatusResult[]; status_code?: string };
-    if (data.status_code && data.status_code !== "OK") {
-      throw new Error(`사업자등록 상태조회 오류: ${data.status_code}`);
-    }
-    return data.data || [];
-  } finally {
-    clearTimeout(timeout);
+  const data = await response.json() as { data?: BusinessStatusResult[]; status_code?: string };
+  if (data.status_code && data.status_code !== "OK") {
+    throw new Error(`사업자등록 상태조회 오류: ${data.status_code}`);
   }
+  return data.data || [];
 }

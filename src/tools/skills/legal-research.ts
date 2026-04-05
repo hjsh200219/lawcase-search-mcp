@@ -20,7 +20,7 @@ import {
   getLawArticleSub, searchAILegalTerms, searchLinkedOrdinances,
 } from "../../law-api.js";
 import { errorResponse, truncate } from "../../shared.js";
-import { createDispatcher, requireParam, type SkillResult } from "./_shared.js";
+import { createDispatcher, requireParam, emptyResultMessage, type SkillResult } from "./_shared.js";
 
 const ACTIONS = [
   "search_laws",
@@ -73,7 +73,7 @@ function handleSearchLaws(oc: string) {
       });
 
       if (result.items.length === 0) {
-        return { content: [{ type: "text", text: `"${p.query}" 법령 검색 결과가 없습니다.` }] };
+        return emptyResultMessage("법령 검색", { query: p.query }, "검색어의 띄어쓰기를 조정하거나 약칭(예: 민법, 상법)으로 검색해 보세요. 법제처 API는 일시 점검(새벽 시간대)일 수 있습니다.");
       }
 
       const listText = result.items
@@ -139,7 +139,7 @@ function handleSearchAdminRules(oc: string) {
       });
 
       if (result.items.length === 0) {
-        return { content: [{ type: "text", text: `"${p.query}" 행정규칙 검색 결과가 없습니다.` }] };
+        return emptyResultMessage("행정규칙 검색", { query: p.query }, "행정규칙명(고시, 훈령, 예규 등)을 포함하여 검색해 보세요.");
       }
 
       const listText = result.items
@@ -199,7 +199,7 @@ function handleSearchOrdinances(oc: string) {
       });
 
       if (result.items.length === 0) {
-        return { content: [{ type: "text", text: `"${p.query}" 자치법규 검색 결과가 없습니다.` }] };
+        return emptyResultMessage("자치법규 검색", { query: p.query }, "자치단체명(서울특별시, 경기도 등)이나 조례명 키워드로 검색해 보세요.");
       }
 
       const listText = result.items

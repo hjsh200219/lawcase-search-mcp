@@ -11,7 +11,11 @@
     "dev": "tsx --node-options='--use-system-ca' src/index.ts",
     "dev:remote": "tsx --node-options='--use-system-ca' src/remote.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "register": "node scripts/register-claude-desktop.mjs",
+    "register:local": "node scripts/register-claude-desktop.mjs --local",
+    "unregister": "node scripts/register-claude-desktop.mjs --remove",
+    "inspect": "npx @modelcontextprotocol/inspector node --use-system-ca dist/index.js"
   },
   "keywords": [
     "mcp",

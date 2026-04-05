@@ -3,5 +3,6 @@ dist/
 .env
 *.log
 .omc/
+.playwright-mcp/
 .DS_Store
 _workspace/

@@ -4,22 +4,18 @@
  *
  * 수출입은행 API는 쿠키 기반 보안 검증 사용:
  * 첫 요청 → 302 + Set-Cookie → 쿠키 포함 재요청 → JSON 응답
+ *
+ * 영업일 자동 폴백: 주말/공휴일/11시 이전 등으로 빈 응답 시
+ * 최대 7일 전까지 자동 재시도
  */
 
 import type { EximExchangeRateRaw, EximExchangeRate } from "./exim-types.js";
+import { toKSTDate, formatYYYYMMDD, subtractDays, skipWeekends } from "./kst-date.js";
 
 const KOREAEXIM_API_URL =
   "https://www.koreaexim.go.kr/site/program/financial/exchangeJSON";
 const TIMEOUT_MS = 15000;
-
-function getKSTDateYYYYMMDD(): string {
-  const now = new Date();
-  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const y = kst.getUTCFullYear();
-  const m = String(kst.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(kst.getUTCDate()).padStart(2, "0");
-  return `${y}${m}${d}`;
-}
+const MAX_FALLBACK_DAYS = 7;
 
 export function parseExchangeRateResponse(
   items: EximExchangeRateRaw[],
@@ -37,11 +33,10 @@ export function parseExchangeRateResponse(
     .filter((item) => !isNaN(item.dealBaseRate));
 }
 
-export async function getMarketExchangeRates(
+async function fetchRatesForDate(
   apiKey: string,
-  dateStr?: string,
+  searchDate: string,
 ): Promise<EximExchangeRate[]> {
-  const searchDate = dateStr ?? getKSTDateYYYYMMDD();
   const url = `${KOREAEXIM_API_URL}?authkey=${apiKey}&searchdate=${searchDate}&data=AP01`;
   const fetchOptions: RequestInit = {
     method: "GET",
@@ -49,35 +44,70 @@ export async function getMarketExchangeRates(
     signal: AbortSignal.timeout(TIMEOUT_MS),
   };
 
-  try {
-    const first = await fetch(url, { ...fetchOptions, redirect: "manual" });
+  const first = await fetch(url, { ...fetchOptions, redirect: "manual" });
 
-    let response: Response;
-    if (first.status === 302) {
-      const cookie = first.headers.get("set-cookie")?.split(";")[0] ?? "";
-      const location = first.headers.get("location") ?? "";
-      const redirectUrl = location.startsWith("http")
-        ? location
-        : `https://www.koreaexim.go.kr${location}`;
-      response = await fetch(redirectUrl, {
-        ...fetchOptions,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (KoreanPublicDataMCP)",
-          Cookie: cookie,
-        },
-      });
-    } else {
-      response = first;
-    }
-
-    if (!response.ok) return [];
-
-    const json = await response.json();
-    if (!Array.isArray(json) || json.length === 0) return [];
-
-    return parseExchangeRateResponse(json as EximExchangeRateRaw[]);
-  } catch (e) {
-    console.error("수출입은행 API error:", e);
-    return [];
+  let response: Response;
+  if (first.status === 302) {
+    const cookie = first.headers.get("set-cookie")?.split(";")[0] ?? "";
+    const location = first.headers.get("location") ?? "";
+    const redirectUrl = location.startsWith("http")
+      ? location
+      : `https://www.koreaexim.go.kr${location}`;
+    response = await fetch(redirectUrl, {
+      ...fetchOptions,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (KoreanPublicDataMCP)",
+        Cookie: cookie,
+      },
+    });
+  } else {
+    response = first;
   }
+
+  if (!response.ok) return [];
+
+  const json = await response.json();
+  if (!Array.isArray(json) || json.length === 0) return [];
+
+  return parseExchangeRateResponse(json as EximExchangeRateRaw[]);
+}
+
+export interface EximExchangeRateResult {
+  rates: EximExchangeRate[];
+  queriedDate: string;
+  isFallback: boolean;
+}
+
+/**
+ * 비영업일(주말·공휴일·11시 이전) 자동 폴백:
+ * 요청일에 결과가 없으면 최대 7일 전까지 하루씩 되돌아가며 재시도.
+ * 주말은 API 호출 없이 건너뜀.
+ */
+export async function getMarketExchangeRates(
+  apiKey: string,
+  dateStr?: string,
+): Promise<EximExchangeRateResult> {
+  const today = formatYYYYMMDD(toKSTDate());
+  const requestDate = dateStr ?? today;
+  const originalDate = requestDate;
+
+  let candidate = skipWeekends(requestDate);
+
+  for (let attempt = 0; attempt < MAX_FALLBACK_DAYS; attempt++) {
+    try {
+      const rates = await fetchRatesForDate(apiKey, candidate);
+      if (rates.length > 0) {
+        return {
+          rates,
+          queriedDate: candidate,
+          isFallback: candidate !== originalDate,
+        };
+      }
+    } catch (e) {
+      console.error(`수출입은행 API error (${candidate}):`, e);
+    }
+    candidate = skipWeekends(subtractDays(candidate, 1));
+  }
+
+  return { rates: [], queriedDate: requestDate, isFallback: false };
 }

@@ -33,7 +33,7 @@ import {
 } from "../../unipass-api.js";
 import { fetchImportMeatTrace } from "../../mafra-api.js";
 import { errorResponse, truncate } from "../../shared.js";
-import { createDispatcher, requireParam, type SkillResult } from "./_shared.js";
+import { createDispatcher, requireParam, emptyResultMessage, type SkillResult } from "./_shared.js";
 
 const ACTIONS = [
   "track_cargo",
@@ -149,7 +149,7 @@ function handleVerifyDeclaration(unipassKeys: Record<string, string>) {
     try {
       const item = await verifyImportDeclaration(unipassKeys, p.declaration_no!);
       if (!item) {
-        return { content: [{ type: "text", text: "해당 신고번호의 수입신고 정보를 찾을 수 없습니다." }] };
+        return emptyResultMessage("수입신고 검증", { declaration_no: p.declaration_no }, "신고번호 형식(14자리)을 확인해 주세요. 예: 12345-26-012345X");
       }
       const text = [
         `## 수입신고 검증 (${p.declaration_no})`,

@@ -93,7 +93,8 @@ export function registerUnipassRoutes(router: Router, keys: Record<string, strin
   router.get("/unipass/customs-rate", handle(async (req) => {
     const curr = req.query.currencies;
     const currencies = typeof curr === "string" ? curr.split(",") : undefined;
-    return getCustomsExchangeRates(keys, currencies);
+    const result = await getCustomsExchangeRates(keys, currencies);
+    return result.rates;
   }));
 
   router.get("/unipass/company", handle(async (req) => {

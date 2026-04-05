@@ -4,6 +4,7 @@
  */
 
 import { XMLParser, XMLValidator } from "fast-xml-parser";
+import { toKSTDate, formatYYYYMMDD, subtractDays } from "./kst-date.js";
 import type {
   CargoTrackingItem,
   ContainerItem,
@@ -11,6 +12,7 @@ import type {
   HsCodeItem,
   TariffRateItem,
   CustomsExchangeRateItem,
+  CustomsExchangeRateResult,
   CompanyItem,
   BrokerItem,
   InspectionItem,
@@ -328,39 +330,82 @@ export async function getTariffRate(
 
 // --- API012: 관세환율 ---
 
+/** 특정 날짜의 관세 환율을 직접 fetch (fetchUnipassXml 우회 — 실패/무결과 분리) */
+async function fetchCustomsRatesForDate(
+  apiKeys: Record<string, string>,
+  dateParam: string,
+  imexTp: string,
+  currencies: string[],
+): Promise<CustomsExchangeRateItem[]> {
+  const params: Record<string, string> = { qryYymmDd: dateParam, imexTp };
+  const url = buildUnipassUrl(apiKeys, "012", "/trifFxrtInfoQry/retrieveTrifFxrtInfo", params);
+
+  const response = await fetch(url, { method: "GET", signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!response.ok) {
+    throw new Error(`관세환율 API HTTP 오류: ${response.status}`);
+  }
+
+  const xml = await response.text();
+  const parsed = parseUnipassXml(xml);
+
+  const root = parsed.trifFxrtInfoQryRtnVo as Record<string, unknown> | undefined;
+  if (!root) return [];
+  if (isNtceError(root)) {
+    const ntce = root.ntceInfo as Record<string, unknown> | undefined;
+    const code = ntce?.resultCode ?? "";
+    const msg = ntce?.resultMsg ?? String(root.ntceInfo);
+    throw new Error(`관세환율 API 오류: ${code} ${msg}`);
+  }
+
+  const items = root.trifFxrtInfoQryRsltVo;
+  if (!items) return [];
+
+  const arr = Array.isArray(items) ? items : [items];
+  return (arr as Record<string, unknown>[])
+    .map((item) => ({
+      currSgn: str(item.currSgn),
+      fxrt: str(item.fxrt),
+      aplyBgnDt: str(item.aplyBgnDt),
+      mtryUtNm: str(item.mtryUtNm),
+      cntySgn: str(item.cntySgn),
+      imexTp: str(item.imexTp),
+    }))
+    .filter((item) => currencies.includes(item.currSgn.toUpperCase()));
+}
+
+/**
+ * 관세 환율 조회 — 주 단위 폴백.
+ * 관세 환율은 주 단위 고시이므로 빈 결과 시 7일 전으로 1회 점프 (최대 API 호출 2회).
+ */
 export async function getCustomsExchangeRates(
   apiKeys: Record<string, string>,
   currencies?: string[],
   qryYymmDd?: string,
   imexTp?: string,
-): Promise<CustomsExchangeRateItem[]> {
-  const dateParam = qryYymmDd ?? new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const params: Record<string, string> = { qryYymmDd: dateParam, imexTp: imexTp ?? "1" };
-  const url = buildUnipassUrl(apiKeys, "012", "/trifFxrtInfoQry/retrieveTrifFxrtInfo", params);
-  const xml = await fetchUnipassXml(url);
-  if (!xml) return [];
+): Promise<CustomsExchangeRateResult> {
+  const requestDate = qryYymmDd ?? formatYYYYMMDD(toKSTDate());
+  const filter = currencies ?? ["USD", "EUR", "JPY", "CNY", "GBP"];
+  const tp = imexTp ?? "1";
 
-  try {
-    const parsed = parseUnipassXml(xml);
-    const list = extractList(parsed, "trifFxrtInfoQryRtnVo", "trifFxrtInfoQryRsltVo");
-    if (!list) return [];
+  const candidates = [requestDate, subtractDays(requestDate, 7)];
 
-    const filter = currencies ?? ["USD", "EUR", "JPY", "CNY", "GBP"];
-
-    return list
-      .map((item) => ({
-        currSgn: str(item.currSgn),
-        fxrt: str(item.fxrt),
-        aplyBgnDt: str(item.aplyBgnDt),
-        mtryUtNm: str(item.mtryUtNm),
-        cntySgn: str(item.cntySgn),
-        imexTp: str(item.imexTp),
-      }))
-      .filter((item) => filter.includes(item.currSgn.toUpperCase()));
-  } catch (e) {
-    console.error("UNI-PASS API error:", e);
-    return [];
+  for (const candidate of candidates) {
+    try {
+      const rates = await fetchCustomsRatesForDate(apiKeys, candidate, tp, filter);
+      if (rates.length > 0) {
+        return {
+          rates,
+          queriedDate: candidate,
+          isFallback: candidate !== requestDate,
+        };
+      }
+    } catch (e) {
+      console.error(`관세환율 조회 오류 (${candidate}):`, e);
+      throw e;
+    }
   }
+
+  return { rates: [], queriedDate: requestDate, isFallback: false };
 }
 
 // --- API010: 통관고유부호 업체 조회 ---

@@ -345,10 +345,11 @@ describe("getCustomsExchangeRates", () => {
     `);
 
     const result = await getCustomsExchangeRates(VALID_KEYS);
-    expect(result).toHaveLength(1);
-    expect(result[0].currSgn).toBe("USD");
-    expect(result[0].fxrt).toBe("1350.00");
-    expect(result[0].mtryUtNm).toBe("US Dollar");
+    expect(result.rates).toHaveLength(1);
+    expect(result.rates[0].currSgn).toBe("USD");
+    expect(result.rates[0].fxrt).toBe("1350.00");
+    expect(result.rates[0].mtryUtNm).toBe("US Dollar");
+    expect(result.isFallback).toBe(false);
   });
 });
 

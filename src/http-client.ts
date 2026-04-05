@@ -18,6 +18,8 @@ export interface FetchOptions {
   retryDelayMs?: number;
   /** 요청 간 최소 간격 (ms). 0이면 스로틀 없음. 기본 0 */
   throttleMs?: number;
+  /** fetch에 전달할 RequestInit (method, headers, body 등). signal은 내부 관리. */
+  init?: Omit<RequestInit, "signal">;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +97,7 @@ export async function fetchWithRetry(
 
     try {
       const response = await fetch(url, {
+        ...options?.init,
         signal: AbortSignal.timeout(timeoutMs),
       });
 

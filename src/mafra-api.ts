@@ -3,6 +3,7 @@
  * http://211.237.50.150:7080/openapi
  */
 
+import { fetchWithRetry } from "./http-client.js";
 import type {
   MeatTraceRecord,
   MeatTraceSearchParams,
@@ -89,7 +90,7 @@ export async function fetchImportMeatTrace(
 
   let response: Response;
   try {
-    response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+    response = await fetchWithRetry(url, { timeoutMs: TIMEOUT_MS, maxRetries: 2 });
   } catch {
     throw new Error("수입축산물 이력 API 연결 실패: 네트워크 연결 오류");
   }
