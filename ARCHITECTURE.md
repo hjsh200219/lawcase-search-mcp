@@ -85,12 +85,12 @@ public-data-mcp is a Model Context Protocol (MCP) server providing Korean public
 
 | Layer | File(s) | Lines | Responsibility |
 |-------|---------|-------|---------------|
-| **Entrypoint** | `index.ts`, `remote.ts`, `config.ts` | 23 + 115 + 60 | Process bootstrap, transport init, env validation |
-| **Protocol** | `server.ts`, `tools/skills/` (10 skills + prompts) | 27 + 5,897 total | MCP 스킬 도구 등록, action 디스패치, zod validation |
+| **Entrypoint** | `index.ts`, `remote.ts`, `config.ts` | 23 + 115 + 67 | Process bootstrap, transport init, env validation |
+| **Protocol** | `server.ts`, `tools/skills/` (10 skills + prompts) | 21 + 4,087 (구현만) | MCP 스킬 도구 등록, action 디스패치, zod validation |
 | **HTTP Adapter** | `api-routes.ts` + `routes/` (7 files), `openapi.ts` + `openapi/` | 40+890, 42+1279 | REST routes, OpenAPI 3.1 spec |
-| **Data Access** | `law-api.ts`, `dart-api.ts`, `data20-api.ts`, `unipass-api.ts`, `exim-api.ts`, `mafra-api.ts` | 1549 + 375 + 355 + 1501 + 82 + 103 | API clients: fetch, parse, rate-limit, retry |
+| **Data Access** | `law-api.ts`, `dart-api.ts`, `data20-api.ts`, `unipass-api.ts`, `exim-api.ts`, `mafra-api.ts` | 1546 + 375 + 355 + 1501 + 82 + 103 | API clients: fetch, parse, rate-limit, retry |
 | **Shared** | `shared.ts`, `http-client.ts` | 18 + 125 | Cross-cutting utilities, shared HTTP client |
-| **Types** | `law-types.ts`, `dart-types.ts`, `data20-types.ts`, `unipass-types.ts`, `exim-types.ts`, `mafra-types.ts` | 598 + 153 + 143 + 574 + 27 + 38 | TypeScript interfaces per domain |
+| **Types** | `law-types.ts`, `dart-types.ts`, `data20-types.ts`, `unipass-types.ts`, `exim-types.ts`, `mafra-types.ts` | 598 + 153 + 143 + 568 + 27 + 38 | TypeScript interfaces per domain |
 
 ## Dependency Rules
 
@@ -125,13 +125,13 @@ Dev dependencies: `typescript`, `tsx`, `@types/node`, `@types/express`, `vitest`
 | Test File | Tests | Coverage |
 |-----------|-------|---------|
 | `law-api.test.ts` | 41 | 법제처 핵심 10개 API |
-| `unipass-api.test.ts` | 42 | UNI-PASS 42개 API 전수 |
-| `data20-api.test.ts` | 10 | 공공데이터 2개 API |
+| `unipass-api.test.ts` | 65 | UNI-PASS API 전수 |
+| `data20-api.test.ts` | 9 | 공공데이터 API |
 | `exim-api.test.ts` | 7 | 수출입은행 전수 |
 | `mafra-api.test.ts` | 8 | 농림축산식품부 전수 |
 | `http-client.test.ts` | 12 | HTTP client 전수 |
 | `tools/skills/_shared.test.ts` | 9 | 디스패처/파라미터 검증 |
-| `tools/skills/*.test.ts` (10개) | 140 | 10개 스킬 도구 action별 테스트 |
+| `tools/skills/*.test.ts` (11개) | 149 | 10개 스킬 + _shared 도구 action별 테스트 |
 | **합계** | **291** | — |
 
 ## Key Patterns

@@ -3,14 +3,13 @@
 ## Layers (top to bottom)
 
 ```
-1. Entrypoint      index.ts, remote.ts
-2. Protocol         server.ts, tools/dart-tools.ts, tools/data20-tools.ts,
-                    tools/unipass-tools.ts, tools/exim-tools.ts, tools/mafra-tools.ts
-3. HTTP Adapter     api-routes.ts, openapi.ts
+1. Entrypoint      index.ts, remote.ts, config.ts
+2. Protocol         server.ts → tools/skills/ (10 skills + prompts)
+3. HTTP Adapter     api-routes.ts → routes/, openapi.ts → openapi/
 4. Data Access      law-api.ts, dart-api.ts, data20-api.ts,
                     unipass-api.ts, exim-api.ts, mafra-api.ts
-4b. Shared          shared.ts
-5. Types            types.ts, dart-types.ts, data20-types.ts,
+4b. Shared          shared.ts, http-client.ts, tools/skills/_shared.ts
+5. Types            law-types.ts, dart-types.ts, data20-types.ts,
                     unipass-types.ts, exim-types.ts, mafra-types.ts
 ```
 
@@ -37,20 +36,17 @@ API client files (`law-api.ts`, `dart-api.ts`, `data20-api.ts`, `unipass-api.ts`
 `server.ts`/`tools/*` (MCP tools) and `api-routes.ts` (REST) both depend on Data Access but must not depend on each other.
 
 ```
-server.ts ──────────────┐
-tools/dart-tools.ts ────┤
-tools/data20-tools.ts ──┤
-tools/unipass-tools.ts ─┼──→ law-api.ts, dart-api.ts, data20-api.ts,
-tools/exim-tools.ts ────┤    unipass-api.ts, exim-api.ts, mafra-api.ts → types
-tools/mafra-tools.ts ───┤
-api-routes.ts ──────────┘
+server.ts ──────────────────┐
+tools/skills/ (10 skills) ──┼──→ law-api.ts, dart-api.ts, data20-api.ts,
+                            │    unipass-api.ts, exim-api.ts, mafra-api.ts → types
+api-routes.ts → routes/ ────┘
 ```
 
 ### R6: OpenAPI spec is self-contained
 `openapi.ts` generates a static spec object. It must not import from Data Access or Protocol layers.
 
 ### R7: Domain-specific files follow naming convention
-Each new data domain gets: `{domain}-api.ts` (Data Access), `{domain}-types.ts` (Types), `tools/{domain}-tools.ts` (Protocol).
+Each new data domain gets: `{domain}-api.ts` (Data Access), `{domain}-types.ts` (Types). MCP 스킬은 `tools/skills/` 내 의도 기반 파일에 action으로 통합.
 
 ## Violation Checklist
 
@@ -59,6 +55,6 @@ When adding new code, verify:
 - [ ] Environment variables only in entrypoints
 - [ ] New 법제처 types go in `types.ts`, other domains in `{domain}-types.ts`
 - [ ] New 법제처 API functions go in `law-api.ts`, other domains in `{domain}-api.ts`
-- [ ] New domain MCP tools go in `tools/{domain}-tools.ts`
-- [ ] New REST endpoints go in `api-routes.ts`
-- [ ] Shared utilities go in `shared.ts`
+- [ ] New MCP actions go in existing `tools/skills/*.ts` or new skill file
+- [ ] New REST endpoints go in `routes/{domain}-routes.ts`
+- [ ] Shared utilities go in `shared.ts` or `tools/skills/_shared.ts`

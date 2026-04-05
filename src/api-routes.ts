@@ -3,7 +3,7 @@
  */
 
 import { Router } from "express";
-import type { ServerConfig } from "./server.js";
+import type { ServerConfig } from "./config.js";
 import { registerLawRoutes } from "./routes/law-routes.js";
 import { registerDartRoutes } from "./routes/dart-routes.js";
 import { registerData20Routes } from "./routes/data20-routes.js";

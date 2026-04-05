@@ -21,16 +21,16 @@
 | `tools/skills/index.ts` | 42 | **A** | 오케스트레이터, API 키 조건부 등록 |
 | `tools/skills/_shared.ts` | 55 | **A** | createDispatcher/requireParam + 테스트 9개 |
 | `tools/skills/prompts.ts` | 135 | **A** | 5개 MCP Prompts 워크플로 가이드 |
-| `tools/skills/tariff-lookup.ts` | 242 | **B+** | 9 actions, 테스트 17개 |
-| `tools/skills/legal-research.ts` | 613 | **B** | 17 actions, 테스트 21개. 대형 팩토리 함수 |
-| `tools/skills/case-research.ts` | 426 | **B+** | 10 actions, 테스트 14개. 디스패처 분리 모범 |
-| `tools/skills/law-amendment.ts` | 336 | **B+** | 9 actions, 테스트 14개 |
-| `tools/skills/import-clearance.ts` | 588 | **B** | 20 actions, 테스트 13개. 대형 팩토리 함수 |
-| `tools/skills/export-clearance.ts` | 200 | **A-** | 6 actions, 테스트 10개 |
-| `tools/skills/shipping-logistics.ts` | 250 | **B+** | 9 actions, 테스트 12개 |
-| `tools/skills/trade-entity.ts` | 288 | **B+** | 11 actions, 테스트 14개 |
-| `tools/skills/corporate-disclosure.ts` | 339 | **B+** | 7 actions, 테스트 12개 |
-| `tools/skills/public-data.ts` | 259 | **B+** | 9 actions, 테스트 13개 |
+| `tools/skills/tariff-lookup.ts` | 272 | **B+** | 9 actions, 테스트 17개 |
+| `tools/skills/legal-research.ts` | 663 | **B** | 17 actions, 테스트 21개. 대형 파일 |
+| `tools/skills/case-research.ts` | 428 | **B+** | 10 actions, 테스트 14개. 디스패처 분리 모범 |
+| `tools/skills/law-amendment.ts` | 366 | **B+** | 9 actions, 테스트 14개 |
+| `tools/skills/import-clearance.ts` | 649 | **B** | 20 actions, 테스트 13개. 대형 파일 |
+| `tools/skills/export-clearance.ts` | 221 | **A-** | 6 actions, 테스트 10개 |
+| `tools/skills/shipping-logistics.ts` | 280 | **B+** | 9 actions, 테스트 12개 |
+| `tools/skills/trade-entity.ts` | 324 | **B+** | 11 actions, 테스트 14개 |
+| `tools/skills/corporate-disclosure.ts` | 363 | **B+** | 7 actions, 테스트 12개 |
+| `tools/skills/public-data.ts` | 289 | **B+** | 9 actions, 테스트 13개 |
 
 ### Data Access Layer
 
@@ -41,14 +41,14 @@
 | `unipass-api.ts` | 1501 | **B-** | 포괄적 테스트, 대형 파일 |
 | `data20-api.ts` | 355 | **B** | 일부 API만 테스트 |
 | `dart-api.ts` | 375 | **B-** | 캐시/quota 좋으나 테스트 없음 |
-| `law-api.ts` | 1549 | **C+** | 재시도 로직 좋으나 모놀리식 |
+| `law-api.ts` | 1546 | **C+** | 재시도 로직 좋으나 모놀리식 |
 
 ### Types Layer
 
 | File | Lines | Grade | Notes |
 |------|-------|-------|-------|
 | `law-types.ts` | 598 | **A** | 법제처 인터페이스. `any` 제로 |
-| `unipass-types.ts` | 574 | **A** | 42개 인터페이스. `any` 제로 |
+| `unipass-types.ts` | 568 | **A** | 42개 인터페이스. `any` 제로 |
 | `dart-types.ts` | 153 | **A** | DART interfaces |
 | `data20-types.ts` | 143 | **A** | 공공데이터포털 interfaces |
 | `mafra-types.ts` | 38 | **A** | 깔끔한 타입 정의 |
@@ -58,14 +58,14 @@
 
 | File | Lines | Grade | Notes |
 |------|-------|-------|-------|
-| `server.ts` | 27 | **A** | v6 오케스트레이터. skills/index.ts 위임 |
-| `config.ts` | 60 | **A** | 환경변수 수집 (DRY 추출) |
+| `server.ts` | 21 | **A** | v6 오케스트레이터. skills/index.ts 위임 |
+| `config.ts` | 67 | **A** | 환경변수 수집 (DRY 추출) |
 | `index.ts` | 23 | **A** | Stdio entrypoint |
 | `remote.ts` | 115 | **A-** | Express HTTP 서버, 세션 관리 |
 | `shared.ts` | 18 | **B** | 공유 유틸. 테스트 없음 |
 | `http-client.ts` | 125 | **A-** | 공유 HTTP client, 테스트 12개 |
 
-### HTTP Adapter (deprecated tools와 함께 유지)
+### HTTP Adapter
 
 | File | Lines | Grade | Notes |
 |------|-------|-------|-------|
@@ -85,11 +85,10 @@
 
 ## Blockers to Grade A
 
-1. **대형 팩토리 함수** — legal-research(613), import-clearance(588) 등 팩토리 함수 50줄 초과
-2. **대형 Data Access 파일** — `law-api.ts`(1549), `unipass-api.ts`(1501) 분리 필요
+1. **대형 스킬 파일** — legal-research(663), import-clearance(649) 등 handle* 함수가 많아 파일 자체가 대형
+2. **대형 Data Access 파일** — `law-api.ts`(1546), `unipass-api.ts`(1501) 분리 필요
 3. **REST 입력 검증 없음** — `api-routes.ts`에서 raw query params 직접 사용
-4. **Zod action 설명 부족** — action enum 값에 `.describe()` 미적용
-5. **deprecated tools 미삭제** — 기존 6개 개별 도구 파일이 고아 상태로 잔존
+4. **dart-api.ts 단위 테스트 부재** — 스킬 목 테스트에만 의존
 
 ## Strengths
 

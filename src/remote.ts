@@ -22,7 +22,7 @@ const sessions = new Map<string, StreamableHTTPServerTransport>();
 
 // Health check
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", server: "public-data", version: "5.0.0" });
+  res.json({ status: "ok", server: "public-data", version: "6.0.0" });
 });
 
 // REST API (GPT Actions 등 일반 HTTP 클라이언트용)
